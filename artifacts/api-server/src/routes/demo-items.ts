@@ -40,7 +40,13 @@ router.post("/demo-items", async (req, res): Promise<void> => {
     supabaseUrl = "";
   }
   if (!supabaseUrl || !supabaseAnonKey) {
-    req.log.error("Supabase environment is not configured");
+    req.log.error(
+      {
+        supabaseUrlConfigured: Boolean(supabaseUrl),
+        supabaseKeyConfigured: Boolean(supabaseAnonKey),
+      },
+      "Supabase environment is not configured",
+    );
     res.status(503).json({ error: "حفظ البيانات غير متاح حالياً." });
     return;
   }
