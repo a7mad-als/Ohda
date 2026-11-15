@@ -637,6 +637,7 @@
 
 .ohda-hero {
   position: relative;
+  isolation: isolate;
   display: grid;
   width: min(1200px, calc(100% - 72px));
   min-height: 552px;

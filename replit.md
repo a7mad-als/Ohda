@@ -1,6 +1,6 @@
-# [Project name]
+# عهدة — Ohda
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+عهدة تساعد البائع والمشتري في الكويت على إتمام صفقات المستعمل بخطوات واضحة وآمنة.
 
 ## Run & Operate
 
@@ -30,11 +30,13 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- النسخة الحالية صفحة تعريفية وتجربة تقنية لحفظ اسم غرض واحد فقط؛ ليست نظام صفقات ولا تستقبل أموالاً حقيقية.
+- الدفع المستقبلي يبدأ مع Tap بوضع الاختبار فقط، ولا تُفعّل مدفوعات حقيقية دون طلب صريح.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- يفضّل المستخدم بناء الـMVP بخطوات صغيرة قابلة للتجربة.
+- مزود الدفع التجريبي المخطط له هو Tap، وليس Stripe.
 
 ## Gotchas
 

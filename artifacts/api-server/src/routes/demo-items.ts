@@ -6,6 +6,15 @@ import {
 
 const router: IRouter = Router();
 
+function normalizeSetting(value: string | undefined, name: string): string | null {
+  if (!value) return null;
+  const assignment = new RegExp(
+    `^(?:export\\s+)?(?:NEXT_PUBLIC_|VITE_)?${name}\\s*=\\s*`,
+    "i",
+  );
+  return value.trim().replace(assignment, "").trim().replace(/^(['"])(.*)\1$/, "$2");
+}
+
 router.post("/demo-items", async (req, res): Promise<void> => {
   const parsed = CreateDemoItemBody.safeParse(req.body);
   if (!parsed.success) {
@@ -13,8 +22,23 @@ router.post("/demo-items", async (req, res): Promise<void> => {
     return;
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, "");
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  const name = parsed.data.name.trim();
+  if (!name) {
+    res.status(400).json({ error: "اكتب اسم الغرض بشكل صحيح." });
+    return;
+  }
+
+  const rawSupabaseUrl = normalizeSetting(process.env.SUPABASE_URL, "SUPABASE_URL");
+  const supabaseAnonKey = normalizeSetting(
+    process.env.SUPABASE_ANON_KEY,
+    "SUPABASE_ANON_KEY",
+  );
+  let supabaseUrl: string;
+  try {
+    supabaseUrl = new URL(rawSupabaseUrl ?? "").origin;
+  } catch {
+    supabaseUrl = "";
+  }
   if (!supabaseUrl || !supabaseAnonKey) {
     req.log.error("Supabase environment is not configured");
     res.status(503).json({ error: "حفظ البيانات غير متاح حالياً." });
@@ -31,11 +55,11 @@ router.post("/demo-items", async (req, res): Promise<void> => {
         "Content-Type": "application/json",
         Prefer: "return=minimal",
       },
-      body: JSON.stringify({ name: parsed.data.name.trim() }),
+      body: JSON.stringify({ name }),
       signal: AbortSignal.timeout(8_000),
     });
   } catch (error) {
-    req.log.error({ err: error }, "Supabase insert request failed");
+    req.log.error("Supabase insert request failed");
     res.status(503).json({ error: "تعذر الاتصال بقاعدة البيانات. جرّب مرة ثانية." });
     return;
   }
@@ -47,7 +71,7 @@ router.post("/demo-items", async (req, res): Promise<void> => {
   }
 
   res.status(201).json(
-    CreateDemoItemResponse.parse({ saved: true, name: parsed.data.name.trim() }),
+    CreateDemoItemResponse.parse({ saved: true, name }),
   );
 });
 
