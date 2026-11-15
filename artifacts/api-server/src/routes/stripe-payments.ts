@@ -29,6 +29,26 @@ type StripePaymentIntent = {
   metadata?: Record<string, unknown>;
 };
 
+function stripeErrorDetails(
+  payload: Record<string, unknown> | null,
+): { type?: string; code?: string; param?: string; message?: string } {
+  const error = payload?.error;
+  if (!error || typeof error !== "object" || Array.isArray(error)) return {};
+  const fields = error as Record<string, unknown>;
+  return {
+    ...(typeof fields.type === "string" ? { type: fields.type } : {}),
+    ...(typeof fields.code === "string" ? { code: fields.code } : {}),
+    ...(typeof fields.param === "string" ? { param: fields.param } : {}),
+    ...(typeof fields.message === "string"
+      ? {
+          message: fields.message
+            .slice(0, 200)
+            .replace(/sk_(?:test|live)_[A-Za-z0-9]+/g, "[redacted]"),
+        }
+      : {}),
+  };
+}
+
 function normalizeKey(value: string | undefined): string {
   if (!value) return "";
   return value.trim().replace(/^(['"])(.*)\1$/, "$2");
@@ -149,6 +169,10 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
   }
 
   const payload = await readStripeJson(response);
+  const stripeError = stripeErrorDetails(payload);
+  const supportsKwd =
+    stripeError.param === "line_items[0][price_data][currency]" &&
+    stripeError.message?.toLowerCase().startsWith("invalid currency: kwd");
   if (
     !response.ok ||
     typeof payload?.id !== "string" ||
@@ -156,9 +180,22 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
     typeof payload.url !== "string"
   ) {
     req.log.error(
-      { statusCode: response.status },
+      {
+        statusCode: response.status,
+        stripeError: {
+          ...(stripeError.type ? { type: stripeError.type } : {}),
+          ...(stripeError.code ? { code: stripeError.code } : {}),
+          ...(stripeError.param ? { param: stripeError.param } : {}),
+        },
+      },
       "Stripe rejected test authorization checkout",
     );
+    if (supportsKwd) {
+      res.status(503).json({
+        error: "حساب Stripe التجريبي لا يدعم الدينار الكويتي حالياً. فعّل دعم KWD في إعدادات Stripe ثم أعد المحاولة.",
+      });
+      return;
+    }
     res.status(502).json({ error: "لم يقبل Stripe الحجز التجريبي. تحقق من إعداد حساب الاختبار." });
     return;
   }
