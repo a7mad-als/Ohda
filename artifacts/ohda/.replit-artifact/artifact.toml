@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "عهدة — Ohda"
+description = "صفحة عهدة العربية لتوضيح البيع والشراء الآمن في الكويت، مع نموذج تجريبي لحفظ اسم غرض واحد في Supabase. لا تستقبل أموالاً حقيقية؛ Tap هو مزود الدفع التجريبي المخطط لاحقاً."
+version = "1.0.0"
+id = "artifacts/ohda"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18620
+
+[services.development]
+run = "pnpm --filter @workspace/ohda run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ohda", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ohda/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18620"
+BASE_PATH = "/"

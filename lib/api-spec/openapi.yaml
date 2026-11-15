@@ -11,6 +11,27 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /demo-items:
+    post:
+      operationId: createDemoItem
+      summary: Save one demo item name to Supabase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoItemInput"
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoItemReceipt"
+        "400":
+          description: Invalid item name
+        "503":
+          description: Supabase unavailable or not configured
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +47,23 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    DemoItemInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+    DemoItemReceipt:
+      type: object
+      required: [saved, name]
+      properties:
+        saved:
+          type: boolean
+        name:
+          type: string
     HealthStatus:
       type: object
       properties:
