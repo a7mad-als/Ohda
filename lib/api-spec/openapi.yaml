@@ -10,7 +10,72 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: payments
+    description: Test payment operations
 paths:
+  /tap/config:
+    get:
+      operationId: getTapPaymentConfig
+      tags: [payments]
+      summary: Get public Tap test configuration
+      responses:
+        "200":
+          description: Tap configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TapPaymentConfig"
+  /tap/authorizations:
+    post:
+      operationId: createTapAuthorization
+      tags: [payments]
+      summary: Create a test Tap authorization hold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TapAuthorizationInput"
+      responses:
+        "201":
+          description: Authorization created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TapAuthorizationReceipt"
+        "400":
+          description: Invalid payment input
+        "503":
+          description: Tap test credentials unavailable
+        "502":
+          description: Tap could not create the authorization
+  /tap/authorizations/{id}:
+    get:
+      operationId: getTapAuthorization
+      tags: [payments]
+      summary: Verify a Tap test authorization status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^auth_[A-Za-z0-9]+$"
+      responses:
+        "200":
+          description: Verified authorization status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TapAuthorizationStatus"
+        "400":
+          description: Invalid authorization ID
+        "404":
+          description: Authorization not found
+        "503":
+          description: Tap test credentials unavailable
+        "502":
+          description: Tap status could not be verified
   /demo-items:
     post:
       operationId: createDemoItem
@@ -47,6 +112,69 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    TapPaymentConfig:
+      type: object
+      additionalProperties: false
+      required: [enabled, publicKey]
+      properties:
+        enabled:
+          type: boolean
+        publicKey:
+          type: ["string", "null"]
+    TapAuthorizationInput:
+      type: object
+      additionalProperties: false
+      required: [itemName, amount, tokenId, firstName, lastName, email, requestId]
+      properties:
+        itemName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amount:
+          type: number
+          minimum: 0.1
+          maximum: 2000
+        tokenId:
+          type: string
+          pattern: "^tok_[A-Za-z0-9]+$"
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        requestId:
+          type: string
+          format: uuid
+    TapAuthorizationReceipt:
+      type: object
+      additionalProperties: false
+      required: [authorizationId, status, redirectUrl]
+      properties:
+        authorizationId:
+          type: string
+        status:
+          type: string
+        redirectUrl:
+          type: ["string", "null"]
+    TapAuthorizationStatus:
+      type: object
+      additionalProperties: false
+      required: [authorizationId, status, amount, currency]
+      properties:
+        authorizationId:
+          type: string
+        status:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
     DemoItemInput:
       type: object
       additionalProperties: false

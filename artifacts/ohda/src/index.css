@@ -718,6 +718,12 @@
   color: #1e352f;
 }
 
+.ohda-button-outline {
+  border: 1px solid rgb(247 245 237 / 55%);
+  background: transparent;
+  color: #fffdf5;
+}
+
 .ohda-text-link {
   display: inline-flex;
   align-items: center;
@@ -1495,6 +1501,188 @@
   font-size: 12px;
 }
 
+.ohda-payment-dialog {
+  width: min(100%, 540px);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+}
+
+.ohda-payment-providers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ohda-payment-provider {
+  display: grid;
+  min-height: 48px;
+  align-content: center;
+  gap: 2px;
+  border: 1px solid #dfe2d9;
+  border-radius: 7px;
+  color: #45534e;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ohda-payment-provider small {
+  color: #859189;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.ohda-payment-provider.is-active {
+  border-color: #6b9b7e;
+  background: #edf4ed;
+  color: #275b48;
+}
+
+.ohda-payment-provider.is-disabled {
+  color: #909891;
+  background: #f4f3ee;
+}
+
+.ohda-payment-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ohda-payment-form label {
+  margin-top: 3px;
+  color: #465650;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ohda-payment-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #dfe2d9;
+  border-radius: 7px;
+  background: #fff;
+  color: #263c3e;
+  font: inherit;
+  font-size: 12px;
+}
+
+.ohda-payment-form input:focus-visible {
+  outline: 3px solid #e6ae55;
+  outline-offset: 2px;
+}
+
+.ohda-payment-form input:disabled {
+  color: #64726b;
+  background: #f3f4ef;
+}
+
+.ohda-payment-name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ohda-payment-name-fields > div {
+  display: grid;
+  gap: 8px;
+}
+
+.ohda-payment-summary {
+  display: flex;
+  min-height: 45px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+  padding: 8px 11px;
+  border-radius: 7px;
+  background: #f1f3ec;
+  color: #2d4841;
+  font-size: 11px;
+}
+
+.ohda-payment-summary > span {
+  margin-inline-start: auto;
+  font-weight: 700;
+  direction: ltr;
+}
+
+.ohda-payment-edit {
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #37735c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+}
+
+.ohda-payment-edit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ohda-tap-card {
+  min-height: 210px;
+  overflow: hidden;
+  margin-top: 2px;
+  border: 1px solid #e0e4dd;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ohda-payment-loading,
+.ohda-payment-unavailable {
+  margin: 16px 0 0;
+  padding: 12px;
+  border-radius: 7px;
+  background: #f1f3ec;
+  color: #51635a;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.ohda-payment-unavailable {
+  color: #8b3434;
+  background: #fbefec;
+}
+
+.ohda-payment-result {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.ohda-payment-result-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e6eee6;
+  color: #37735c;
+}
+
+.ohda-payment-result > strong {
+  color: #263c3e;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.ohda-payment-result > span {
+  color: #68776f;
+  font-size: 11px;
+  direction: ltr;
+}
+
+.ohda-payment-result .ohda-dialog-copy {
+  margin-top: 5px;
+}
+
 .ohda-dialog-footnote {
   margin: 14px 0 0;
   color: #87918a;
@@ -1845,6 +2033,10 @@
 
   .ohda-dialog {
     padding: 24px 20px;
+  }
+
+  .ohda-payment-dialog {
+    padding: 24px 18px;
   }
 }
 

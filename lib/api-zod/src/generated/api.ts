@@ -9,6 +9,65 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Get public Tap test configuration
+ */
+export const GetTapPaymentConfigResponse = zod.object({
+  "enabled": zod.boolean(),
+  "publicKey": zod.string().nullable()
+})
+
+
+/**
+ * @summary Create a test Tap authorization hold
+ */
+export const createTapAuthorizationBodyItemNameMax = 120;
+
+export const createTapAuthorizationBodyAmountMin = 0.1;
+export const createTapAuthorizationBodyAmountMax = 2000;
+
+export const createTapAuthorizationBodyTokenIdRegExp = new RegExp('^tok_[A-Za-z0-9]+$');
+export const createTapAuthorizationBodyFirstNameMax = 80;
+
+export const createTapAuthorizationBodyLastNameMax = 80;
+
+
+
+export const CreateTapAuthorizationBody = zod.object({
+  "itemName": zod.string().min(1).max(createTapAuthorizationBodyItemNameMax),
+  "amount": zod.number().min(createTapAuthorizationBodyAmountMin).max(createTapAuthorizationBodyAmountMax),
+  "tokenId": zod.string().regex(createTapAuthorizationBodyTokenIdRegExp),
+  "firstName": zod.string().min(1).max(createTapAuthorizationBodyFirstNameMax),
+  "lastName": zod.string().min(1).max(createTapAuthorizationBodyLastNameMax),
+  "email": zod.string().email(),
+  "requestId": zod.string().uuid()
+})
+
+export const CreateTapAuthorizationResponse = zod.object({
+  "authorizationId": zod.string(),
+  "status": zod.string(),
+  "redirectUrl": zod.string().nullable()
+})
+
+
+/**
+ * @summary Verify a Tap test authorization status
+ */
+export const getTapAuthorizationPathIdRegExp = new RegExp('^auth_[A-Za-z0-9]+$');
+
+
+export const GetTapAuthorizationParams = zod.object({
+  "id": zod.coerce.string().regex(getTapAuthorizationPathIdRegExp)
+})
+
+export const GetTapAuthorizationResponse = zod.object({
+  "authorizationId": zod.string(),
+  "status": zod.string(),
+  "amount": zod.number(),
+  "currency": zod.string()
+})
+
+
+/**
  * @summary Save one demo item name to Supabase
  */
 export const createDemoItemBodyNameMax = 120;

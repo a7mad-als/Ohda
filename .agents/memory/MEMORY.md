@@ -1,0 +1,1 @@
+- [Tap Marketplace onboarding](tap-marketplace-limits.md) — seller payouts require Tap Marketplace approval and onboarding beyond standard card authorization.
