@@ -5,6 +5,53 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface TapPaymentConfig {
+  enabled: boolean;
+  /** @nullable */
+  publicKey: string | null;
+}
+
+export interface TapAuthorizationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  itemName: string;
+  /**
+     * @minimum 0.1
+     * @maximum 2000
+     */
+  amount: number;
+  /** @pattern ^tok_[A-Za-z0-9]+$ */
+  tokenId: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  firstName: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  lastName: string;
+  email: string;
+  requestId: string;
+}
+
+export interface TapAuthorizationReceipt {
+  authorizationId: string;
+  status: string;
+  /** @nullable */
+  redirectUrl: string | null;
+}
+
+export interface TapAuthorizationStatus {
+  authorizationId: string;
+  status: string;
+  amount: number;
+  currency: string;
+}
+
 export interface DemoItemInput {
   /**
      * @minLength 1

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useCreateDemoItem } from '@workspace/api-client-react';
+import { TapPaymentDialog } from '../components/tap-payment-dialog';
 import {
   ArrowDown,
   ArrowLeft,
@@ -193,7 +194,42 @@ function DemoDialog({
 
 export default function Home() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [tapDialogOpen, setTapDialogOpen] = useState(false);
+  const [tapReturnId, setTapReturnId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tapReturn') !== '1') return;
+
+    let authorizationId: string | null = null;
+    try {
+      const stored = sessionStorage.getItem('ohda.tap.authorization');
+      if (stored) {
+        const parsed = JSON.parse(stored) as { authorizationId?: unknown };
+        if (
+          typeof parsed.authorizationId === 'string' &&
+          /^auth_[A-Za-z0-9]+$/.test(parsed.authorizationId)
+        ) {
+          authorizationId = parsed.authorizationId;
+        }
+      }
+    } catch {
+      sessionStorage.removeItem('ohda.tap.authorization');
+    }
+
+    if (authorizationId) {
+      setTapReturnId(authorizationId);
+      setTapDialogOpen(true);
+    }
+    params.delete('tapReturn');
+    const search = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
+    );
+  }, []);
 
   return (
     <main className="ohda-page" dir="rtl">
@@ -249,6 +285,9 @@ export default function Home() {
             <button className="ohda-button ohda-button-light" onClick={() => setDialogOpen(true)} type="button">
               جرّب حفظ غرض <ArrowLeft size={17} />
             </button>
+            <button className="ohda-button ohda-button-outline" onClick={() => setTapDialogOpen(true)} type="button">
+              اختبر حجز Tap <LockKeyhole size={16} />
+            </button>
             <a className="ohda-text-link" href="#how">اكتشف شلون تعمل <ArrowDown size={16} /></a>
           </div>
           <div className="ohda-hero-details">
@@ -288,7 +327,7 @@ export default function Home() {
               <div><strong>البائع يستلم</strong><span>بعد تأكيد المشتري</span></div>
             </div>
           </div>
-          <div className="ohda-visual-foot"><LockKeyhole size={13} /> توضيح للمفهوم فقط — الدفع غير متاح حالياً</div>
+          <div className="ohda-visual-foot"><LockKeyhole size={13} /> Tap للاختبار فقط — بدون أموال حقيقية</div>
         </div>
         <div className="ohda-hero-orbit orbit-one" />
         <div className="ohda-hero-orbit orbit-two" />
@@ -364,7 +403,7 @@ export default function Home() {
         <div className="ohda-faq-list">
           <details>
             <summary>هل أقدر أدفع الحين؟ <ChevronDown size={17} /></summary>
-            <p>لا. الدفع مو متاح بهالنسخة التجريبية، وما راح يُخصم أي مبلغ. عند إضافة الدفع لاحقاً، الخطة تستخدم تاب بوضع الاختبار.</p>
+            <p>تقدر تختبر حجز البطاقة عبر Tap بمفتاح الاختبار فقط. ما ينخصم مبلغ حقيقي ولا يتحول شيء للبائع، وStripe غير مفعّل حالياً.</p>
           </details>
           <details>
             <summary>هل حفظ اسم الغرض ينشئ صفقة؟ <ChevronDown size={17} /></summary>
@@ -396,6 +435,14 @@ export default function Home() {
         <span className="ohda-footer-note">نسخة تجريبية · بدون مدفوعات حقيقية</span>
       </footer>
       <DemoDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      <TapPaymentDialog
+        open={tapDialogOpen}
+        onClose={() => {
+          setTapDialogOpen(false);
+          setTapReturnId(null);
+        }}
+        returnedAuthorizationId={tapReturnId}
+      />
     </main>
   );
 }

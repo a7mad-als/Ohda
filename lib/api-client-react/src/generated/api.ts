@@ -22,7 +22,11 @@ import type {
 import type {
   DemoItemInput,
   DemoItemReceipt,
-  HealthStatus
+  HealthStatus,
+  TapAuthorizationInput,
+  TapAuthorizationReceipt,
+  TapAuthorizationStatus,
+  TapPaymentConfig
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -51,6 +55,248 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetTapPaymentConfigUrl = () => {
+
+
+
+
+  return `/api/tap/config`
+}
+
+/**
+ * @summary Get public Tap test configuration
+ */
+export const getTapPaymentConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<TapPaymentConfig> => {
+
+  return customFetch<TapPaymentConfig>(getGetTapPaymentConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTapPaymentConfigQueryKey = () => {
+    return [
+    `/api/tap/config`
+    ] as const;
+    }
+
+
+export const getGetTapPaymentConfigQueryOptions = <TData = Awaited<ReturnType<typeof getTapPaymentConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTapPaymentConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTapPaymentConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTapPaymentConfig>>> = ({ signal }) => getTapPaymentConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTapPaymentConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTapPaymentConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getTapPaymentConfig>>>
+export type GetTapPaymentConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get public Tap test configuration
+ */
+
+export function useGetTapPaymentConfig<TData = Awaited<ReturnType<typeof getTapPaymentConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTapPaymentConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTapPaymentConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateTapAuthorizationUrl = () => {
+
+
+
+
+  return `/api/tap/authorizations`
+}
+
+/**
+ * @summary Create a test Tap authorization hold
+ */
+export const createTapAuthorization = async (tapAuthorizationInput: TapAuthorizationInput, options?: Parameters<typeof customFetch>[1]): Promise<TapAuthorizationReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TapAuthorizationReceipt>(getCreateTapAuthorizationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(tapAuthorizationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateTapAuthorizationMutationKey = () => ['createTapAuthorization'] as const;
+
+export const getCreateTapAuthorizationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTapAuthorization>>, TError,CreateTapAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTapAuthorization>>, TError,CreateTapAuthorizationMutationVariables, TContext> => {
+
+const mutationKey = getCreateTapAuthorizationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTapAuthorization>>, CreateTapAuthorizationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTapAuthorization(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTapAuthorizationMutationResult = NonNullable<Awaited<ReturnType<typeof createTapAuthorization>>>
+    export type CreateTapAuthorizationMutationBody = BodyType<TapAuthorizationInput>
+    export type CreateTapAuthorizationMutationError = ErrorType<void>
+    export type CreateTapAuthorizationMutationVariables = {data: BodyType<TapAuthorizationInput>}
+
+    /**
+ * @summary Create a test Tap authorization hold
+ */
+export const useCreateTapAuthorization = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTapAuthorization>>, TError,CreateTapAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTapAuthorization>>,
+        TError,
+        CreateTapAuthorizationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateTapAuthorizationMutationOptions(options));
+    }
+
+export const getGetTapAuthorizationUrl = (id: string,) => {
+
+
+
+
+  return `/api/tap/authorizations/${id}`
+}
+
+/**
+ * @summary Verify a Tap test authorization status
+ */
+export const getTapAuthorization = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TapAuthorizationStatus> => {
+
+  return customFetch<TapAuthorizationStatus>(getGetTapAuthorizationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTapAuthorizationQueryKey = (id: string,) => {
+    return [
+    `/api/tap/authorizations/${id}`
+    ] as const;
+    }
+
+
+export const getGetTapAuthorizationQueryOptions = <TData = Awaited<ReturnType<typeof getTapAuthorization>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTapAuthorization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTapAuthorizationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTapAuthorization>>> = ({ signal }) => getTapAuthorization(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTapAuthorization>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTapAuthorizationQueryResult = NonNullable<Awaited<ReturnType<typeof getTapAuthorization>>>
+export type GetTapAuthorizationQueryError = ErrorType<void>
+
+
+/**
+ * @summary Verify a Tap test authorization status
+ */
+
+export function useGetTapAuthorization<TData = Awaited<ReturnType<typeof getTapAuthorization>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTapAuthorization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTapAuthorizationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCreateDemoItemUrl = () => {
 

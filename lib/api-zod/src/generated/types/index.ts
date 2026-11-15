@@ -9,3 +9,7 @@
 export * from './demoItemInput';
 export * from './demoItemReceipt';
 export * from './healthStatus';
+export * from './tapAuthorizationInput';
+export * from './tapAuthorizationReceipt';
+export * from './tapAuthorizationStatus';
+export * from './tapPaymentConfig';
