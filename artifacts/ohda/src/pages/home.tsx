@@ -196,33 +196,60 @@ export default function Home() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tapDialogOpen, setTapDialogOpen] = useState(false);
   const [tapReturnId, setTapReturnId] = useState<string | null>(null);
+  const [stripeReturnSessionId, setStripeReturnSessionId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('tapReturn') !== '1') return;
-
+    if (
+      params.get('tapReturn') !== '1' &&
+      params.get('stripeReturn') !== '1' &&
+      params.get('stripeCancel') !== '1'
+    ) {
+      return;
+    }
     let authorizationId: string | null = null;
-    try {
-      const stored = sessionStorage.getItem('ohda.tap.authorization');
-      if (stored) {
-        const parsed = JSON.parse(stored) as { authorizationId?: unknown };
-        if (
-          typeof parsed.authorizationId === 'string' &&
-          /^auth_[A-Za-z0-9]+$/.test(parsed.authorizationId)
-        ) {
-          authorizationId = parsed.authorizationId;
+    let stripeSessionId: string | null = null;
+
+    if (params.get('tapReturn') === '1') {
+      try {
+        const stored = sessionStorage.getItem('ohda.tap.authorization');
+        if (stored) {
+          const parsed = JSON.parse(stored) as { authorizationId?: unknown };
+          if (
+            typeof parsed.authorizationId === 'string' &&
+            /^auth_[A-Za-z0-9]+$/.test(parsed.authorizationId)
+          ) {
+            authorizationId = parsed.authorizationId;
+          }
         }
+      } catch {
+        sessionStorage.removeItem('ohda.tap.authorization');
       }
-    } catch {
-      sessionStorage.removeItem('ohda.tap.authorization');
+    }
+
+    if (params.get('stripeReturn') === '1') {
+      const returnedSessionId = params.get('session_id');
+      if (
+        returnedSessionId &&
+        /^cs_test_[A-Za-z0-9]+$/.test(returnedSessionId)
+      ) {
+        stripeSessionId = returnedSessionId;
+      }
     }
 
     if (authorizationId) {
       setTapReturnId(authorizationId);
       setTapDialogOpen(true);
     }
+    if (stripeSessionId) {
+      setStripeReturnSessionId(stripeSessionId);
+      setTapDialogOpen(true);
+    }
     params.delete('tapReturn');
+    params.delete('stripeReturn');
+    params.delete('stripeCancel');
+    params.delete('session_id');
     const search = params.toString();
     window.history.replaceState(
       {},
@@ -440,8 +467,10 @@ export default function Home() {
         onClose={() => {
           setTapDialogOpen(false);
           setTapReturnId(null);
+          setStripeReturnSessionId(null);
         }}
         returnedAuthorizationId={tapReturnId}
+        returnedStripeSessionId={stripeReturnSessionId}
       />
     </main>
   );

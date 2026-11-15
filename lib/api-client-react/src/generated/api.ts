@@ -23,6 +23,10 @@ import type {
   DemoItemInput,
   DemoItemReceipt,
   HealthStatus,
+  StripeAuthorizationInput,
+  StripeAuthorizationReceipt,
+  StripeAuthorizationStatus,
+  StripePaymentConfig,
   TapAuthorizationInput,
   TapAuthorizationReceipt,
   TapAuthorizationStatus,
@@ -286,6 +290,248 @@ export function useGetTapAuthorization<TData = Awaited<ReturnType<typeof getTapA
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTapAuthorizationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetStripePaymentConfigUrl = () => {
+
+
+
+
+  return `/api/stripe/config`
+}
+
+/**
+ * @summary Get public Stripe test configuration
+ */
+export const getStripePaymentConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<StripePaymentConfig> => {
+
+  return customFetch<StripePaymentConfig>(getGetStripePaymentConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStripePaymentConfigQueryKey = () => {
+    return [
+    `/api/stripe/config`
+    ] as const;
+    }
+
+
+export const getGetStripePaymentConfigQueryOptions = <TData = Awaited<ReturnType<typeof getStripePaymentConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStripePaymentConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStripePaymentConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStripePaymentConfig>>> = ({ signal }) => getStripePaymentConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStripePaymentConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStripePaymentConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getStripePaymentConfig>>>
+export type GetStripePaymentConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get public Stripe test configuration
+ */
+
+export function useGetStripePaymentConfig<TData = Awaited<ReturnType<typeof getStripePaymentConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStripePaymentConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStripePaymentConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateStripeAuthorizationUrl = () => {
+
+
+
+
+  return `/api/stripe/authorizations`
+}
+
+/**
+ * @summary Create a test Stripe authorization hold
+ */
+export const createStripeAuthorization = async (stripeAuthorizationInput: StripeAuthorizationInput, options?: Parameters<typeof customFetch>[1]): Promise<StripeAuthorizationReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<StripeAuthorizationReceipt>(getCreateStripeAuthorizationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(stripeAuthorizationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateStripeAuthorizationMutationKey = () => ['createStripeAuthorization'] as const;
+
+export const getCreateStripeAuthorizationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStripeAuthorization>>, TError,CreateStripeAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStripeAuthorization>>, TError,CreateStripeAuthorizationMutationVariables, TContext> => {
+
+const mutationKey = getCreateStripeAuthorizationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStripeAuthorization>>, CreateStripeAuthorizationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStripeAuthorization(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStripeAuthorizationMutationResult = NonNullable<Awaited<ReturnType<typeof createStripeAuthorization>>>
+    export type CreateStripeAuthorizationMutationBody = BodyType<StripeAuthorizationInput>
+    export type CreateStripeAuthorizationMutationError = ErrorType<void>
+    export type CreateStripeAuthorizationMutationVariables = {data: BodyType<StripeAuthorizationInput>}
+
+    /**
+ * @summary Create a test Stripe authorization hold
+ */
+export const useCreateStripeAuthorization = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStripeAuthorization>>, TError,CreateStripeAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStripeAuthorization>>,
+        TError,
+        CreateStripeAuthorizationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateStripeAuthorizationMutationOptions(options));
+    }
+
+export const getGetStripeAuthorizationUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/stripe/authorizations/${sessionId}`
+}
+
+/**
+ * @summary Verify a Stripe test authorization status
+ */
+export const getStripeAuthorization = async (sessionId: string, options?: Parameters<typeof customFetch>[1]): Promise<StripeAuthorizationStatus> => {
+
+  return customFetch<StripeAuthorizationStatus>(getGetStripeAuthorizationUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStripeAuthorizationQueryKey = (sessionId: string,) => {
+    return [
+    `/api/stripe/authorizations/${sessionId}`
+    ] as const;
+    }
+
+
+export const getGetStripeAuthorizationQueryOptions = <TData = Awaited<ReturnType<typeof getStripeAuthorization>>, TError = ErrorType<void>>(sessionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStripeAuthorization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStripeAuthorizationQueryKey(sessionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStripeAuthorization>>> = ({ signal }) => getStripeAuthorization(sessionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStripeAuthorization>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStripeAuthorizationQueryResult = NonNullable<Awaited<ReturnType<typeof getStripeAuthorization>>>
+export type GetStripeAuthorizationQueryError = ErrorType<void>
+
+
+/**
+ * @summary Verify a Stripe test authorization status
+ */
+
+export function useGetStripeAuthorization<TData = Awaited<ReturnType<typeof getStripeAuthorization>>, TError = ErrorType<void>>(
+ sessionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStripeAuthorization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStripeAuthorizationQueryOptions(sessionId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

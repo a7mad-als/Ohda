@@ -52,6 +52,47 @@ export interface TapAuthorizationStatus {
   currency: string;
 }
 
+export interface StripePaymentConfig {
+  enabled: boolean;
+}
+
+export interface StripeAuthorizationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  itemName: string;
+  /**
+     * @minimum 0.1
+     * @maximum 2000
+     */
+  amount: number;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  firstName: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  lastName: string;
+  email: string;
+  requestId: string;
+}
+
+export interface StripeAuthorizationReceipt {
+  sessionId: string;
+  redirectUrl: string;
+}
+
+export interface StripeAuthorizationStatus {
+  authorizationId: string;
+  status: string;
+  amount: number;
+  currency: string;
+}
+
 export interface DemoItemInput {
   /**
      * @minLength 1
