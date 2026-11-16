@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
-import { LockKeyhole } from "lucide-react";
+import { LoaderCircle, LockKeyhole } from "lucide-react";
 import { getSession, resendSignupConfirmation, savePendingWaitlistInterests, signIn, signUp } from "@/lib/ohda-data";
 import { Card, Field, FormMessage, PageHeading, Shell, SubmitButton } from "@/components/ohda-ui";
 
@@ -84,12 +84,14 @@ export function LoginPage() {
       setError(cause instanceof Error ? cause.message : "تعذر إرسال رابط جديد. انتظر قليلاً ثم حاول.");
     } finally { setResending(false); }
   }
-  return <Shell><div className="auth-layout"><div className="auth-aside"><span className="auth-lock"><LockKeyhole size={27} /></span><span className="eyebrow">حسابك في عهدة</span><h2>اتفاقاتك،<br />بمكان واحد.</h2><p>تابع الصفقات اللي بينك وبين الناس بكل وضوح.</p></div><Card className="auth-card"><PageHeading eyebrow="حياك الله" title="دخول" description="سجّل دخولك عشان تتابع صفقاتك." /><form className="form-stack" onSubmit={submit}>
+  return <Shell><div className="auth-layout"><div className="auth-aside"><span className="auth-lock"><LockKeyhole size={27} /></span><span className="eyebrow">حسابك في عهدة</span><h2>اتفاقاتك،<br />بمكان واحد.</h2><p>تابع الصفقات اللي بينك وبين الناس بكل وضوح.</p></div><Card className="auth-card"><PageHeading eyebrow="حياك الله" title="دخول" description="سجّل دخولك عشان تتابع صفقاتك." />
+    {hasCallbackSession && busy ? <div className="auth-confirm-state" role="status" aria-live="polite"><LoaderCircle size={28} className="spin" /><strong>{success || "تم تأكيد بريدك. جاري تسجيل دخولك…"}</strong><small>بنفتح حسابك بعد لحظة.</small></div> : <form className="form-stack" onSubmit={submit}>
     <Field label="البريد الإلكتروني" id="login-email"><input id="login-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></Field>
     <Field label="كلمة المرور" id="login-password"><input id="login-password" type="password" autoComplete="current-password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} /></Field>
      <FormMessage error={error} success={success} /><SubmitButton busy={busy}>دخول إلى حسابي</SubmitButton>
      {canResend && <button className="button button-secondary" type="button" onClick={() => void resendConfirmation()} disabled={resending || busy}>{resending ? "جاري إرسال الرابط…" : "إعادة إرسال رابط التأكيد"}</button>}
-    </form><p className="auth-switch">ما عندك حساب؟ <Link href={`/signup${window.location.search}`}>سوّ حساب جديد</Link></p><p className="quiet-note">نسخة اختبارية — التسجيل ما يخصم أي مبلغ.</p></Card></div></Shell>;
+     </form>}
+     {!hasCallbackSession || !busy ? <p className="auth-switch">ما عندك حساب؟ <Link href={`/signup${window.location.search}`}>سوّ حساب جديد</Link></p> : null}<p className="quiet-note">نسخة اختبارية — التسجيل ما يخصم أي مبلغ.</p></Card></div></Shell>;
 }
 
 export function SignupPage() {

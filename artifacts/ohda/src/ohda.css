@@ -191,6 +191,10 @@ p { margin-top: 0; }
 .auth-card { align-self: center; padding: 31px; }
 .auth-card .page-heading { margin-bottom: 23px; }
 .auth-card .page-heading h1 { font-size: 30px; }
+.auth-confirm-state { display: grid; justify-items: center; gap: 13px; padding: 32px 18px; border: 1px solid #D4E9DF; border-radius: 20px; background: #ECF6F1; color: #064E3B; text-align: center; }
+.auth-confirm-state svg { color: #0E9F6E; }
+.auth-confirm-state strong { font-size: 17px; }
+.auth-confirm-state small { color: #64716d; }
 .auth-switch { margin: 18px 0 0; text-align: center; color: #64716d; }
 .auth-switch a { color: #0E9F6E; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .quiet-note { margin: 10px 0 0; color: #64716d; font-size: 11px; text-align: center; }
