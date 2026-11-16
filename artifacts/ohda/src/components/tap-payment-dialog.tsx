@@ -56,6 +56,18 @@ function findTapToken(value: unknown, depth = 0): string | null {
   return null;
 }
 
+function findTapErrorCode(value: unknown, depth = 0): string | null {
+  if (depth > 3 || !value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  for (const key of ["code", "error_code", "errorCode", "type"]) {
+    const code = record[key];
+    if (typeof code === "string" && /^[A-Za-z0-9_-]{2,50}$/.test(code)) {
+      return code;
+    }
+  }
+  return findTapErrorCode(record.error, depth + 1);
+}
+
 function statusMessage(provider: PaymentProvider, status: string): string {
   if (provider === "stripe" && status.toUpperCase() === "AUTHORIZED") {
     return "تم حجز المبلغ للاختبار فقط. ما تم تحصيله.";
@@ -584,9 +596,14 @@ export function TapPaymentDialog({
                           },
                         }}
                         onValidInput={(valid) => setCardValid(Boolean(valid))}
-                        onError={() => {
+                        onError={(data) => {
                           setTokenizing(false);
-                          setError("بيانات البطاقة غير صحيحة. تحقق منها وحاول مرة ثانية.");
+                          const code = findTapErrorCode(data);
+                          setError(
+                            code
+                              ? `أبلغ Tap عن خطأ (${code}). هذا الرمز لا يحدد وحده إن كانت المشكلة من البطاقة أو تحميل النموذج.`
+                              : "أبلغ نموذج Tap عن خطأ. هذا لا يعني بالضرورة أن بيانات البطاقة خاطئة؛ قد تكون المشكلة في تحميل النموذج أو إعداد مفتاح الاختبار.",
+                          );
                         }}
                         onReady={() => setCardReady(true)}
                         onSuccess={handleTokenCreated}
@@ -599,6 +616,22 @@ export function TapPaymentDialog({
                   <p aria-live="polite" className="ohda-form-error" role="alert">
                     {error}
                   </p>
+                )}
+                {error && cardStep && provider === "tap" && (
+                  <button
+                    className="ohda-payment-edit"
+                    disabled={tokenizing || mutationLoading}
+                    onClick={() => {
+                      setCardStep(false);
+                      setCardReady(false);
+                      setCardValid(false);
+                      setRequestId("");
+                      setError("");
+                    }}
+                    type="button"
+                  >
+                    أعد تحميل نموذج Tap
+                  </button>
                 )}
                 <button
                   className="ohda-button ohda-button-primary ohda-dialog-submit"
