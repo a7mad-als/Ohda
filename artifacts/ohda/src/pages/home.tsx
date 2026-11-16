@@ -196,33 +196,60 @@ export default function Home() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tapDialogOpen, setTapDialogOpen] = useState(false);
   const [tapReturnId, setTapReturnId] = useState<string | null>(null);
+  const [stripeReturnSessionId, setStripeReturnSessionId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('tapReturn') !== '1') return;
-
+    if (
+      params.get('tapReturn') !== '1' &&
+      params.get('stripeReturn') !== '1' &&
+      params.get('stripeCancel') !== '1'
+    ) {
+      return;
+    }
     let authorizationId: string | null = null;
-    try {
-      const stored = sessionStorage.getItem('ohda.tap.authorization');
-      if (stored) {
-        const parsed = JSON.parse(stored) as { authorizationId?: unknown };
-        if (
-          typeof parsed.authorizationId === 'string' &&
-          /^auth_[A-Za-z0-9]+$/.test(parsed.authorizationId)
-        ) {
-          authorizationId = parsed.authorizationId;
+    let stripeSessionId: string | null = null;
+
+    if (params.get('tapReturn') === '1') {
+      try {
+        const stored = sessionStorage.getItem('ohda.tap.authorization');
+        if (stored) {
+          const parsed = JSON.parse(stored) as { authorizationId?: unknown };
+          if (
+            typeof parsed.authorizationId === 'string' &&
+            /^auth_[A-Za-z0-9]+$/.test(parsed.authorizationId)
+          ) {
+            authorizationId = parsed.authorizationId;
+          }
         }
+      } catch {
+        sessionStorage.removeItem('ohda.tap.authorization');
       }
-    } catch {
-      sessionStorage.removeItem('ohda.tap.authorization');
+    }
+
+    if (params.get('stripeReturn') === '1') {
+      const returnedSessionId = params.get('session_id');
+      if (
+        returnedSessionId &&
+        /^cs_test_[A-Za-z0-9]+$/.test(returnedSessionId)
+      ) {
+        stripeSessionId = returnedSessionId;
+      }
     }
 
     if (authorizationId) {
       setTapReturnId(authorizationId);
       setTapDialogOpen(true);
     }
+    if (stripeSessionId) {
+      setStripeReturnSessionId(stripeSessionId);
+      setTapDialogOpen(true);
+    }
     params.delete('tapReturn');
+    params.delete('stripeReturn');
+    params.delete('stripeCancel');
+    params.delete('session_id');
     const search = params.toString();
     window.history.replaceState(
       {},
@@ -292,7 +319,7 @@ export default function Home() {
           </div>
           <div className="ohda-hero-details">
             <span><CheckCircle2 size={16} /> بدون تنزيل تطبيق</span>
-            <span><CheckCircle2 size={16} /> من ٢٠ إلى ٢٬٠٠٠ د.ك</span>
+            <span><CheckCircle2 size={16} /> Tap بالدينار، Stripe بالدولار</span>
           </div>
         </div>
 
@@ -403,7 +430,7 @@ export default function Home() {
         <div className="ohda-faq-list">
           <details>
             <summary>هل أقدر أدفع الحين؟ <ChevronDown size={17} /></summary>
-            <p>تقدر تختبر حجز البطاقة عبر Tap بمفتاح الاختبار فقط. ما ينخصم مبلغ حقيقي ولا يتحول شيء للبائع، وStripe غير مفعّل حالياً.</p>
+            <p>تقدر تختبر حجز البطاقة عبر Tap بالدينار أو Stripe بالدولار. ما ينخصم مبلغ حقيقي ولا يتحول شيء للبائع.</p>
           </details>
           <details>
             <summary>هل حفظ اسم الغرض ينشئ صفقة؟ <ChevronDown size={17} /></summary>
@@ -440,8 +467,10 @@ export default function Home() {
         onClose={() => {
           setTapDialogOpen(false);
           setTapReturnId(null);
+          setStripeReturnSessionId(null);
         }}
         returnedAuthorizationId={tapReturnId}
+        returnedStripeSessionId={stripeReturnSessionId}
       />
     </main>
   );

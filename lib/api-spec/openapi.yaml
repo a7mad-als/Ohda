@@ -76,6 +76,69 @@ paths:
           description: Tap test credentials unavailable
         "502":
           description: Tap status could not be verified
+  /stripe/config:
+    get:
+      operationId: getStripePaymentConfig
+      tags: [payments]
+      summary: Get public Stripe test configuration
+      responses:
+        "200":
+          description: Stripe test configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripePaymentConfig"
+  /stripe/authorizations:
+    post:
+      operationId: createStripeAuthorization
+      tags: [payments]
+      summary: Create a USD test Stripe authorization hold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StripeAuthorizationInput"
+      responses:
+        "201":
+          description: Authorization checkout created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeAuthorizationReceipt"
+        "400":
+          description: Invalid payment input
+        "503":
+          description: Stripe test credentials unavailable
+        "502":
+          description: Stripe could not create the authorization
+  /stripe/authorizations/{sessionId}:
+    get:
+      operationId: getStripeAuthorization
+      tags: [payments]
+      summary: Verify a Stripe test authorization status
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^cs_test_[A-Za-z0-9]+$"
+      responses:
+        "200":
+          description: Verified authorization status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeAuthorizationStatus"
+        "400":
+          description: Invalid checkout session ID
+        "404":
+          description: Authorization not found
+        "503":
+          description: Stripe test credentials unavailable
+        "502":
+          description: Stripe status could not be verified
   /demo-items:
     post:
       operationId: createDemoItem
@@ -163,6 +226,63 @@ components:
         redirectUrl:
           type: ["string", "null"]
     TapAuthorizationStatus:
+      type: object
+      additionalProperties: false
+      required: [authorizationId, status, amount, currency]
+      properties:
+        authorizationId:
+          type: string
+        status:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+    StripePaymentConfig:
+      type: object
+      additionalProperties: false
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+    StripeAuthorizationInput:
+      type: object
+      additionalProperties: false
+      required: [itemName, amount, firstName, lastName, email, requestId]
+      properties:
+        itemName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amount:
+          type: number
+          minimum: 0.5
+          maximum: 2000
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        requestId:
+          type: string
+          format: uuid
+    StripeAuthorizationReceipt:
+      type: object
+      additionalProperties: false
+      required: [sessionId, redirectUrl]
+      properties:
+        sessionId:
+          type: string
+        redirectUrl:
+          type: string
+          format: uri
+    StripeAuthorizationStatus:
       type: object
       additionalProperties: false
       required: [authorizationId, status, amount, currency]

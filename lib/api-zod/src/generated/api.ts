@@ -68,6 +68,61 @@ export const GetTapAuthorizationResponse = zod.object({
 
 
 /**
+ * @summary Get public Stripe test configuration
+ */
+export const GetStripePaymentConfigResponse = zod.object({
+  "enabled": zod.boolean()
+})
+
+
+/**
+ * @summary Create a USD test Stripe authorization hold
+ */
+export const createStripeAuthorizationBodyItemNameMax = 120;
+
+export const createStripeAuthorizationBodyAmountMin = 0.5;
+export const createStripeAuthorizationBodyAmountMax = 2000;
+
+export const createStripeAuthorizationBodyFirstNameMax = 80;
+
+export const createStripeAuthorizationBodyLastNameMax = 80;
+
+
+
+export const CreateStripeAuthorizationBody = zod.object({
+  "itemName": zod.string().min(1).max(createStripeAuthorizationBodyItemNameMax),
+  "amount": zod.number().min(createStripeAuthorizationBodyAmountMin).max(createStripeAuthorizationBodyAmountMax),
+  "firstName": zod.string().min(1).max(createStripeAuthorizationBodyFirstNameMax),
+  "lastName": zod.string().min(1).max(createStripeAuthorizationBodyLastNameMax),
+  "email": zod.string().email(),
+  "requestId": zod.string().uuid()
+})
+
+export const CreateStripeAuthorizationResponse = zod.object({
+  "sessionId": zod.string(),
+  "redirectUrl": zod.string().url()
+})
+
+
+/**
+ * @summary Verify a Stripe test authorization status
+ */
+export const getStripeAuthorizationPathSessionIdRegExp = new RegExp('^cs_test_[A-Za-z0-9]+$');
+
+
+export const GetStripeAuthorizationParams = zod.object({
+  "sessionId": zod.coerce.string().regex(getStripeAuthorizationPathSessionIdRegExp)
+})
+
+export const GetStripeAuthorizationResponse = zod.object({
+  "authorizationId": zod.string(),
+  "status": zod.string(),
+  "amount": zod.number(),
+  "currency": zod.string()
+})
+
+
+/**
  * @summary Save one demo item name to Supabase
  */
 export const createDemoItemBodyNameMax = 120;

@@ -13,6 +13,9 @@ import {
   createTapAuthorization,
   getTapAuthorization,
   getTapPaymentConfig,
+  createStripeAuthorization,
+  getStripeAuthorization,
+  getStripePaymentConfig,
 } from "@workspace/api-client-react";
 import { ArrowLeft, Check, CreditCard, X } from "lucide-react";
 
@@ -20,6 +23,20 @@ const RETURN_SESSION_KEY = "ohda.tap.authorization";
 
 type TapConfig = Awaited<ReturnType<typeof getTapPaymentConfig>>;
 type TapStatus = Awaited<ReturnType<typeof getTapAuthorization>>;
+type StripeConfig = Awaited<ReturnType<typeof getStripePaymentConfig>>;
+type StripeStatus = Awaited<ReturnType<typeof getStripeAuthorization>>;
+type PaymentProvider = "tap" | "stripe";
+
+function getSafeStripeCheckoutUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "checkout.stripe.com"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 function findTapToken(value: unknown, depth = 0): string | null {
   if (depth > 4) return null;
@@ -39,7 +56,13 @@ function findTapToken(value: unknown, depth = 0): string | null {
   return null;
 }
 
-function statusMessage(status: string): string {
+function statusMessage(provider: PaymentProvider, status: string): string {
+  if (provider === "stripe" && status.toUpperCase() === "AUTHORIZED") {
+    return "تم حجز المبلغ للاختبار فقط. ما تم تحصيله.";
+  }
+  if (provider === "stripe" && status.toUpperCase() === "NOT_AUTHORIZED") {
+    return "لم يتم تأكيد الحجز التجريبي من Stripe.";
+  }
   switch (status.toUpperCase()) {
     case "AUTHORIZED":
       return "تم الحجز التجريبي بنجاح. ما تم تحصيل المبلغ.";
@@ -48,38 +71,55 @@ function statusMessage(status: string): string {
     case "VOID":
       return "انفك الحجز التجريبي.";
     case "INITIATED":
-      return "بانتظار إكمال خطوة التحقق لدى Tap.";
+      return provider === "stripe"
+        ? "لم يكتمل الحجز التجريبي لدى Stripe."
+        : "بانتظار إكمال خطوة التحقق لدى Tap.";
     case "DECLINED":
     case "FAILED":
-      return "لم تكتمل عملية الاختبار. جرّب بطاقة Tap الاختبارية مرة ثانية.";
+    case "REQUIRES_PAYMENT_METHOD":
+      return provider === "stripe"
+        ? "لم تكتمل عملية الاختبار. تحقق من بطاقة Stripe الاختبارية وحاول مرة ثانية."
+        : "لم تكتمل عملية الاختبار. جرّب بطاقة Tap الاختبارية مرة ثانية.";
     default:
       return `حالة العملية: ${status}`;
   }
+}
+
+function formatPaymentAmount(amount: number, currency: string): string {
+  return currency === "KWD"
+    ? `${amount.toFixed(3)} د.ك`
+    : `$${amount.toFixed(2)} USD`;
 }
 
 export function TapPaymentDialog({
   open,
   onClose,
   returnedAuthorizationId,
+  returnedStripeSessionId,
 }: {
   open: boolean;
   onClose: () => void;
   returnedAuthorizationId?: string | null;
+  returnedStripeSessionId?: string | null;
 }) {
-  const [config, setConfig] = useState<TapConfig | null>(null);
+  const [tapConfig, setTapConfig] = useState<TapConfig | null>(null);
+  const [stripeConfig, setStripeConfig] = useState<StripeConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(false);
+  const [provider, setProvider] = useState<PaymentProvider>("tap");
+  const [statusProvider, setStatusProvider] = useState<PaymentProvider>("tap");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [itemName, setItemName] = useState("");
-  const [amount, setAmount] = useState("20");
+  const [tapAmount, setTapAmount] = useState("20");
+  const [stripeAmount, setStripeAmount] = useState("20");
   const [requestId, setRequestId] = useState("");
   const [cardReady, setCardReady] = useState(false);
   const [cardValid, setCardValid] = useState(false);
   const [cardStep, setCardStep] = useState(false);
   const [tokenizing, setTokenizing] = useState(false);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState<TapStatus | null>(null);
+  const [status, setStatus] = useState<TapStatus | StripeStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState("");
   const [statusRetry, setStatusRetry] = useState(0);
@@ -89,24 +129,34 @@ export function TapPaymentDialog({
     if (!open) return;
     let cancelled = false;
     setConfigLoading(true);
-    getTapPaymentConfig()
-      .then((result) => {
-        if (!cancelled) setConfig(result);
-      })
-      .catch(() => {
-        if (!cancelled) setConfig({ enabled: false, publicKey: null });
-      })
-      .finally(() => {
-        if (!cancelled) setConfigLoading(false);
-      });
+    Promise.all([
+      getTapPaymentConfig()
+        .then((result) => {
+          if (!cancelled) setTapConfig(result);
+        })
+        .catch(() => {
+          if (!cancelled) setTapConfig({ enabled: false, publicKey: null });
+        }),
+      getStripePaymentConfig()
+        .then((result) => {
+          if (!cancelled) setStripeConfig(result);
+        })
+        .catch(() => {
+          if (!cancelled) setStripeConfig({ enabled: false });
+        }),
+    ]).finally(() => {
+      if (!cancelled) setConfigLoading(false);
+    });
     return () => {
       cancelled = true;
     };
   }, [open]);
 
   useEffect(() => {
-    if (!open || !returnedAuthorizationId) return;
+    if (!open || !returnedAuthorizationId || returnedStripeSessionId) return;
     let cancelled = false;
+    setProvider("tap");
+    setStatusProvider("tap");
     setStatusLoading(true);
     setStatusError("");
     getTapAuthorization(returnedAuthorizationId)
@@ -125,7 +175,40 @@ export function TapPaymentDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, returnedAuthorizationId, statusRetry]);
+  }, [open, returnedAuthorizationId, returnedStripeSessionId, statusRetry]);
+
+  useEffect(() => {
+    if (!open || !returnedStripeSessionId) return;
+    let cancelled = false;
+    setProvider("stripe");
+    setStatusProvider("stripe");
+    setStatusLoading(true);
+    setStatusError("");
+    getStripeAuthorization(returnedStripeSessionId)
+      .then((result) => {
+        if (!cancelled) {
+          setStatus(result);
+          setStatusError("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatusError("تعذر التحقق من العملية لدى Stripe.");
+      })
+      .finally(() => {
+        if (!cancelled) setStatusLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, returnedStripeSessionId, statusRetry]);
+
+  useEffect(() => {
+    if (open) return;
+    setStatus(null);
+    setStatusError("");
+    setStatusLoading(false);
+    setProvider("tap");
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -138,29 +221,68 @@ export function TapPaymentDialog({
 
   if (!open) return null;
 
+  const selectedProviderEnabled =
+    provider === "tap"
+      ? Boolean(tapConfig?.enabled && tapConfig.publicKey)
+      : Boolean(stripeConfig?.enabled);
+  const amount = provider === "tap" ? tapAmount : stripeAmount;
+  const setAmount = provider === "tap" ? setTapAmount : setStripeAmount;
   const numericAmount = Number(amount);
+  const minimumAmount = provider === "tap" ? 0.1 : 0.5;
+  const amountScale = provider === "tap" ? 1000 : 100;
+  const amountIsValid =
+    Number.isFinite(numericAmount) &&
+    numericAmount >= minimumAmount &&
+    numericAmount <= 2000 &&
+    Math.abs(numericAmount * amountScale - Math.round(numericAmount * amountScale)) < 1e-7;
   const canContinue =
-    Boolean(config?.enabled && config.publicKey) &&
+    selectedProviderEnabled &&
     itemName.trim().length > 0 &&
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     email.includes("@") &&
-    numericAmount >= 0.1 &&
-    numericAmount <= 2000;
+    amountIsValid;
   const canTokenize =
     cardStep &&
     requestId.length > 0 &&
-    Boolean(config?.enabled && config.publicKey) &&
+    provider === "tap" &&
+    Boolean(tapConfig?.enabled && tapConfig.publicKey) &&
     cardReady &&
     cardValid &&
     itemName.trim().length > 0 &&
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     email.includes("@") &&
-    numericAmount >= 0.1 &&
-    numericAmount <= 2000 &&
+    amountIsValid &&
     !tokenizing &&
     !mutationLoading;
+
+  async function createStripeCheckout() {
+    if (!canContinue || mutationLoading) return;
+    setMutationLoading(true);
+    setError("");
+    const idempotencyKey = window.crypto.randomUUID();
+    try {
+      const checkout = await createStripeAuthorization({
+        itemName: itemName.trim(),
+        amount: Math.round(numericAmount * 100) / 100,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        requestId: idempotencyKey,
+      });
+      const redirectUrl = getSafeStripeCheckoutUrl(checkout.redirectUrl);
+      if (!redirectUrl) {
+        setError("رابط الدفع الآمن لدى Stripe غير صالح.");
+        return;
+      }
+      window.location.assign(redirectUrl);
+    } catch {
+      setError("تعذر بدء الحجز التجريبي. تأكد من إعداد Stripe للاختبار.");
+    } finally {
+      setMutationLoading(false);
+    }
+  }
 
   async function handleTokenCreated(data: unknown) {
     setTokenizing(false);
@@ -209,6 +331,10 @@ export function TapPaymentDialog({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (provider === "stripe") {
+      void createStripeCheckout();
+      return;
+    }
     if (!cardStep) {
       if (!canContinue) return;
       setError("");
@@ -253,13 +379,20 @@ export function TapPaymentDialog({
         </button>
         <div className="ohda-dialog-mark"><CreditCard size={22} /></div>
         <h2 id="tap-dialog-title">
-          {status ? "نتيجة حجز Tap التجريبي" : "جرّب حجز مبلغ مع Tap"}
+          {status
+            ? `نتيجة حجز ${statusProvider === "tap" ? "Tap" : "Stripe"} التجريبي`
+            : `جرّب حجز مبلغ مع ${provider === "tap" ? "Tap" : "Stripe"}`}
         </h2>
 
-        {status || returnedAuthorizationId ? (
+            {status || returnedAuthorizationId || returnedStripeSessionId ? (
           <div aria-live="polite" className="ohda-payment-result">
-            {statusLoading || (returnedAuthorizationId && !status && !statusError) ? (
-              <p className="ohda-dialog-copy">جاري التحقق من الحالة لدى Tap…</p>
+            {statusLoading ||
+            ((returnedAuthorizationId || returnedStripeSessionId) &&
+              !status &&
+              !statusError) ? (
+              <p className="ohda-dialog-copy">
+                جاري التحقق من الحالة لدى {statusProvider === "tap" ? "Tap" : "Stripe"}…
+              </p>
             ) : statusError ? (
               <>
                 <p aria-live="polite" className="ohda-form-error" role="alert">{statusError}</p>
@@ -274,10 +407,12 @@ export function TapPaymentDialog({
             ) : status ? (
               <>
                 <div className="ohda-payment-result-icon"><Check size={20} /></div>
-                <strong>{statusMessage(status.status)}</strong>
-                <span>{status.amount.toFixed(3)} د.ك · {status.status}</span>
+                  <strong>{statusMessage(statusProvider, status.status)}</strong>
+                <span>{formatPaymentAmount(status.amount, status.currency)} · {status.status}</span>
                 <p className="ohda-dialog-copy">
-                  هذه عملية اختبار فقط. لا يوجد تحويل للبائع، والحجز التجريبي ينتهي تلقائياً بعد ٢٤ ساعة.
+                  هذه عملية اختبار فقط. لا يوجد تحويل للبائع.
+                  {statusProvider === "tap" &&
+                    " الحجز التجريبي ينتهي تلقائياً بعد ٢٤ ساعة."}
                 </p>
                 <button
                   className="ohda-button ohda-button-primary ohda-dialog-submit"
@@ -295,23 +430,50 @@ export function TapPaymentDialog({
         ) : (
           <>
             <p className="ohda-dialog-copy">
-              بطاقة Tap آمنة للاختبار. لا يتم تحصيل أموال حقيقية؛ الحجز التجريبي ينتهي تلقائياً بعد ٢٤ ساعة.
+              Tap بالدينار الكويتي وStripe بالدولار الأمريكي. كلاهما للاختبار فقط ولا يحصّل أموالاً حقيقية.
             </p>
 
             <div aria-label="بوابة الدفع" className="ohda-payment-providers">
-              <span aria-current="true" className="ohda-payment-provider is-active">
-                Tap <small>اختبار</small>
-              </span>
-              <span aria-disabled="true" className="ohda-payment-provider is-disabled" title="Stripe غير متصل حالياً">
-                Stripe <small>غير متصل</small>
-              </span>
+              <button
+                aria-pressed={provider === "tap"}
+                className={`ohda-payment-provider ${provider === "tap" ? "is-active" : ""}`}
+                disabled={tokenizing || mutationLoading}
+                onClick={() => {
+                  setProvider("tap");
+                  setCardStep(false);
+                  setRequestId("");
+                  setError("");
+                }}
+                type="button"
+              >
+                Tap <small>اختبار · KWD</small>
+              </button>
+              <button
+                aria-pressed={provider === "stripe"}
+                className={`ohda-payment-provider ${provider === "stripe" ? "is-active" : ""} ${!stripeConfig?.enabled ? "is-disabled" : ""}`}
+                disabled={!stripeConfig?.enabled || tokenizing || mutationLoading}
+                onClick={() => {
+                  setProvider("stripe");
+                  setCardStep(false);
+                  setRequestId("");
+                  setError("");
+                }}
+                title={!stripeConfig?.enabled ? "Stripe غير مهيأ للاختبار" : undefined}
+                type="button"
+              >
+                Stripe <small>{stripeConfig?.enabled ? "اختبار · USD" : "غير مهيأ"}</small>
+              </button>
             </div>
 
             {configLoading ? (
-              <p className="ohda-payment-loading">جاري تجهيز نموذج Tap…</p>
-            ) : !config?.enabled || !config.publicKey ? (
+              <p className="ohda-payment-loading">
+                جاري تجهيز {provider === "tap" ? "نموذج Tap" : "Stripe"}…
+              </p>
+              ) : !selectedProviderEnabled ? (
               <p className="ohda-payment-unavailable" role="alert">
-                نموذج Tap غير جاهز. تأكد من إضافة مفاتيح الاختبار في إعدادات المشروع.
+                {provider === "tap"
+                  ? "نموذج Tap غير جاهز. تأكد من إضافة مفاتيح الاختبار في إعدادات المشروع."
+                  : "Stripe غير مهيأ للاختبار. أضف مفتاح Stripe التجريبي من إعدادات الأسرار."}
               </p>
             ) : (
               <form className="ohda-payment-form" onSubmit={submit}>
@@ -326,14 +488,16 @@ export function TapPaymentDialog({
                   value={itemName}
                 />
 
-                <label htmlFor="tap-amount">المبلغ بالدينار الكويتي</label>
+                <label htmlFor="tap-amount">
+                  {provider === "tap" ? "المبلغ بالدينار الكويتي" : "المبلغ بالدولار الأمريكي"}
+                </label>
                 <input
                   id="tap-amount"
                   inputMode="decimal"
                   max="2000"
-                  min="0.1"
+                  min={minimumAmount}
                   onChange={(event) => setAmount(event.target.value)}
-                  step="0.001"
+                  step={provider === "tap" ? "0.001" : "0.01"}
                   type="number"
                   disabled={cardStep}
                   value={amount}
@@ -378,7 +542,7 @@ export function TapPaymentDialog({
                   <>
                     <div className="ohda-payment-summary">
                       <strong>{itemName.trim()}</strong>
-                      <span>{numericAmount.toFixed(3)} د.ك</span>
+                      <span>{formatPaymentAmount(numericAmount, "KWD")}</span>
                       <button
                         className="ohda-payment-edit"
                         disabled={tokenizing || mutationLoading}
@@ -397,7 +561,7 @@ export function TapPaymentDialog({
                       <TapCard
                         config={{
                           scope: Scope.TOKEN,
-                          operator: { publicKey: config.publicKey },
+                          operator: { publicKey: tapConfig?.publicKey ?? "" },
                           order: {
                             amount: numericAmount,
                             currency: Currencies.KWD,
@@ -447,14 +611,18 @@ export function TapPaymentDialog({
                       ? !cardReady
                         ? "جاري تحميل نموذج البطاقة…"
                         : "اختبر حجز المبلغ"
-                      : "متابعة إلى البطاقة"}
+                      : provider === "stripe"
+                        ? "متابعة إلى Stripe للاختبار"
+                        : "متابعة إلى البطاقة"}
                   {!tokenizing && !mutationLoading && <ArrowLeft size={17} />}
                 </button>
               </form>
             )}
 
             <p className="ohda-dialog-footnote">
-              بيانات البطاقة تدخل في نموذج Tap مباشرة، ولا تمر عبر خادم عهدة.
+              {provider === "tap"
+                ? "بيانات البطاقة تدخل في نموذج Tap مباشرة، ولا تمر عبر خادم عهدة."
+                : "تُدخل بيانات البطاقة في صفحة Stripe الآمنة. هذه عملية اختبار فقط."}
             </p>
           </>
         )}

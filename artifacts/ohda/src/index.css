@@ -1519,11 +1519,15 @@
   min-height: 48px;
   align-content: center;
   gap: 2px;
+  padding: 4px;
   border: 1px solid #dfe2d9;
   border-radius: 7px;
+  background: #fff;
   color: #45534e;
+  cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+  font-family: inherit;
   text-align: center;
 }
 
@@ -1542,6 +1546,7 @@
 .ohda-payment-provider.is-disabled {
   color: #909891;
   background: #f4f3ee;
+  cursor: not-allowed;
 }
 
 .ohda-payment-form {
