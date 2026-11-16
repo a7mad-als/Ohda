@@ -113,6 +113,7 @@ type AuthResponse = {
 
 const SESSION_KEY = "ohda.auth.session";
 let cachedConfig: SupabaseConfig | null = null;
+let authCallbackPromise: Promise<OhdaSession | null> | null = null;
 
 async function getConfig(): Promise<{ url: string; anonKey: string }> {
   if (!cachedConfig) {
@@ -160,6 +161,34 @@ function authSession(payload: AuthResponse): OhdaSession | null {
   };
 }
 
+async function sessionFromAuthCallback(): Promise<OhdaSession | null> {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return null;
+  if (authCallbackPromise) return authCallbackPromise;
+
+  window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+  authCallbackPromise = (async () => {
+    const { url, anonKey } = await getConfig();
+    const response = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
+    });
+    const user = await parseResponse<OhdaUser>(response);
+    const expiresIn = Number(params.get("expires_in"));
+    const session: OhdaSession = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: Math.floor(Date.now() / 1000) + (Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600),
+      user,
+    };
+    saveSession(session);
+    return session;
+  })();
+  return authCallbackPromise;
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => null) as
     | Record<string, unknown>
@@ -186,6 +215,12 @@ async function authRequest<T>(path: string, body: unknown): Promise<T> {
 }
 
 export async function getSession(): Promise<OhdaSession | null> {
+  try {
+    const callbackSession = await sessionFromAuthCallback();
+    if (callbackSession) return callbackSession;
+  } catch {
+    // Keep the existing session available; a user can still sign in manually.
+  }
   const session = storedSession();
   if (!session) return null;
   if (session.expires_at > Math.floor(Date.now() / 1000) + 60) return session;
@@ -215,8 +250,8 @@ export async function signUp(input: {
   email: string;
   password: string;
   country: string;
-}): Promise<{ session: OhdaSession | null; needsEmailConfirmation: boolean }> {
-  const payload = await authRequest<AuthResponse>("signup", {
+}, emailRedirectTo: string): Promise<{ session: OhdaSession | null; needsEmailConfirmation: boolean }> {
+  const payload = await authRequest<AuthResponse>(`signup?redirect_to=${encodeURIComponent(emailRedirectTo)}`, {
     email: input.email,
     password: input.password,
     data: { name: input.name.trim(), country: input.country },
@@ -224,6 +259,13 @@ export async function signUp(input: {
   const session = authSession(payload);
   saveSession(session);
   return { session, needsEmailConfirmation: !session };
+}
+
+export async function resendSignupConfirmation(email: string, emailRedirectTo: string): Promise<void> {
+  await authRequest("resend?redirect_to=" + encodeURIComponent(emailRedirectTo), {
+    type: "signup",
+    email: email.trim(),
+  });
 }
 
 export async function signOut(): Promise<void> {
