@@ -75,6 +75,6 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@tap-payments/card-web": "^1.2.2"
+    "qrcode.react": "^4.2.0"
   }
 }

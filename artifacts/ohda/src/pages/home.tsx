@@ -1,477 +1,65 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useCreateDemoItem } from '@workspace/api-client-react';
-import { TapPaymentDialog } from '../components/tap-payment-dialog';
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowUpLeft,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  CircleCheck,
-  Clock3,
-  Handshake,
-  LockKeyhole,
-  Menu,
-  PackageCheck,
-  ShieldCheck,
-  Truck,
-  X,
-} from 'lucide-react';
+import { Link } from "wouter";
+import { ArrowLeft, BadgeCheck, Clock3, Handshake, LockKeyhole, PackageCheck, ShieldCheck, Truck, WalletCards } from "lucide-react";
+import { Shell, Card, WaitlistButton } from "@/components/ohda-ui";
 
 const steps = [
-  {
-    number: '١',
-    icon: LockKeyhole,
-    title: 'المبلغ يبقى محفوظ',
-    description: 'المشتري يدفع، والمبلغ يبقى بعهدة المنصة لين توصل السلعة.',
-  },
-  {
-    number: '٢',
-    icon: PackageCheck,
-    title: 'استلم وافحص براحتك',
-    description: 'تبدأ مدة الفحص بعد استلامك للغرض، مو من يوم ينشحن.',
-  },
-  {
-    number: '٣',
-    icon: CircleCheck,
-    title: 'أكد، والبائع يستلم',
-    description: 'إذا كل شيء مثل الاتفاق، المبلغ ينصرف للبائع.',
-  },
+  ["المشتري يدفع", "يختار Tap أو Stripe في صفحة الدفع التجريبية."],
+  ["المبلغ محفوظ في العهدة", "يظهر الحجز بعد تأكيد بوابة الاختبار فقط."],
+  ["يستلم ويفحص الغرض", "مدة الفحص تبدأ بعد تأكيد وصوله أو بالتسليم الحضوري."],
+  ["ينصرف المبلغ للبائع", "يكتمل الاتفاق بعد تأكيد المشتري أو انتهاء مهلة الفحص."],
 ];
-
-const ways = [
-  {
-    icon: Handshake,
-    title: 'تسليم حضوري',
-    description: 'تقابلون بعض، وكل طرف يأكد من جواله. ما تتم الصفقة إلا بموافقتكم الاثنين.',
-    tag: 'تأكيد الطرفين',
-  },
-  {
-    icon: Truck,
-    title: 'عن طريق التوصيل',
-    description: 'البائع يسجل الشحنة، والمشتري يأكد وصولها. بعدها تبدأ مدة الفحص.',
-    tag: 'الفحص بعد الوصول',
-  },
-];
-
-function getErrorStatus(error: unknown): number | null {
-  if (!error || typeof error !== 'object' || !('status' in error)) return null;
-  return typeof error.status === 'number' ? error.status : null;
-}
-
-function DemoDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState('');
-  const [savedName, setSavedName] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const mutation = useCreateDemoItem();
-
-  useEffect(() => {
-    if (!open) return;
-    inputRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !mutation.isPending) onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose, mutation.isPending]);
-
-  if (!open) return null;
-
-  const trimmedName = name.trim();
-  const errorStatus = getErrorStatus(mutation.error);
-  const errorMessage =
-    errorStatus === 503
-      ? 'قاعدة البيانات غير جاهزة أو الاتصال بها غير متاح. ما انحفظ أي شيء؛ جرّب مرة ثانية بعد شوي.'
-      : 'ما قدرنا نحفظ الاسم. تأكد من اتصالك وحاول مرة ثانية.';
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!trimmedName || mutation.isPending) return;
-    mutation.mutate(
-      { data: { name: trimmedName } },
-      {
-        onSuccess: (result) => {
-          if (result.saved) {
-            setSavedName(result.name);
-            setName('');
-          }
-        },
-      },
-    );
-  }
-
-  return (
-    <div
-      className="ohda-dialog-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !mutation.isPending) onClose();
-      }}
-    >
-      <section
-        aria-labelledby="demo-dialog-title"
-        aria-modal="true"
-        className="ohda-dialog"
-        role="dialog"
-      >
-        <button
-          aria-label="إغلاق"
-          className="ohda-dialog-close"
-          disabled={mutation.isPending}
-          onClick={onClose}
-          type="button"
-        >
-          <X size={19} />
-        </button>
-        <div className="ohda-dialog-mark"><PackageCheck size={22} /></div>
-        {savedName ? (
-          <div aria-live="polite">
-            <h2 id="demo-dialog-title">انحفظ الاسم بنجاح</h2>
-            <p className="ohda-dialog-copy">
-              سجل تجريبي لغرض «{savedName}» محفوظ في قاعدة البيانات. هذا مو إنشاء صفقة ولا حجز مبلغ.
-            </p>
-            <button
-              className="ohda-button ohda-button-primary ohda-dialog-submit"
-              onClick={() => {
-                setSavedName('');
-                onClose();
-              }}
-              type="button"
-            >
-              تمام، واضح <Check size={17} />
-            </button>
-          </div>
-        ) : (
-          <>
-            <h2 id="demo-dialog-title">جرّب حفظ غرض تجريبي</h2>
-            <p className="ohda-dialog-copy">
-              هذي تجربة لحفظ الاسم في قاعدة البيانات فقط، مو إنشاء صفقة.
-            </p>
-            <form className="ohda-demo-form" onSubmit={submit}>
-              <label htmlFor="item-name">اسم الغرض</label>
-              <input
-                autoComplete="off"
-                id="item-name"
-                maxLength={120}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  mutation.reset();
-                }}
-                placeholder="مثال: ساعة مستعملة"
-                ref={inputRef}
-                value={name}
-              />
-              <span className="ohda-character-count">{name.length}/120</span>
-              {mutation.isError && (
-                <p aria-live="polite" className="ohda-form-error" role="alert">
-                  {errorMessage}
-                </p>
-              )}
-              <button
-                className="ohda-button ohda-button-primary ohda-dialog-submit"
-                disabled={!trimmedName || mutation.isPending}
-                type="submit"
-              >
-                {mutation.isPending ? 'جاري الحفظ…' : 'احفظ الاسم التجريبي'}
-                {!mutation.isPending && <ArrowLeft size={17} />}
-              </button>
-            </form>
-            <p className="ohda-dialog-footnote">
-              ما نطلب معلومات شخصية، وما في أي مدفوعات في هالتجربة.
-            </p>
-          </>
-        )}
-      </section>
-    </div>
-  );
-}
 
 export default function Home() {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [tapDialogOpen, setTapDialogOpen] = useState(false);
-  const [tapReturnId, setTapReturnId] = useState<string | null>(null);
-  const [stripeReturnSessionId, setStripeReturnSessionId] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (
-      params.get('tapReturn') !== '1' &&
-      params.get('stripeReturn') !== '1' &&
-      params.get('stripeCancel') !== '1'
-    ) {
-      return;
-    }
-    let authorizationId: string | null = null;
-    let stripeSessionId: string | null = null;
-
-    if (params.get('tapReturn') === '1') {
-      try {
-        const stored = sessionStorage.getItem('ohda.tap.authorization');
-        if (stored) {
-          const parsed = JSON.parse(stored) as { authorizationId?: unknown };
-          if (
-            typeof parsed.authorizationId === 'string' &&
-            /^auth_[A-Za-z0-9]+$/.test(parsed.authorizationId)
-          ) {
-            authorizationId = parsed.authorizationId;
-          }
-        }
-      } catch {
-        sessionStorage.removeItem('ohda.tap.authorization');
-      }
-    }
-
-    if (params.get('stripeReturn') === '1') {
-      const returnedSessionId = params.get('session_id');
-      if (
-        returnedSessionId &&
-        /^cs_test_[A-Za-z0-9]+$/.test(returnedSessionId)
-      ) {
-        stripeSessionId = returnedSessionId;
-      }
-    }
-
-    if (authorizationId) {
-      setTapReturnId(authorizationId);
-      setTapDialogOpen(true);
-    }
-    if (stripeSessionId) {
-      setStripeReturnSessionId(stripeSessionId);
-      setTapDialogOpen(true);
-    }
-    params.delete('tapReturn');
-    params.delete('stripeReturn');
-    params.delete('stripeCancel');
-    params.delete('session_id');
-    const search = params.toString();
-    window.history.replaceState(
-      {},
-      '',
-      `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
-    );
-  }, []);
-
-  return (
-    <main className="ohda-page" dir="rtl">
-      <div className="ohda-demo-bar">
-        <span className="ohda-demo-dot" />
-        نسخة تجريبية — ما تستقبل أموال حقيقية
+  return <Shell>
+    <div className="demo-ribbon"><span className="demo-dot" />نسخة تجريبية — ما تستقبل أموال حقيقية</div>
+    <section className="hero-block">
+      <div className="hero-copy"><span className="eyebrow">لصفقات المستعمل في الكويت</span><h1>بيع واشتري المستعمل بدون خوف</h1><p className="hero-subtitle">فلوسك محفوظة في العهدة لين تستلم غرضك وتتأكد منه</p><p className="hero-note">اتفاق واضح بين البايع والمشتري، وخطوات تمشي معاكم من أولها.</p>
+        <div className="hero-actions"><Link className="button button-primary" href="/deals/new">ابدأ صفقة الحين <ArrowLeft size={18} /></Link><a className="button button-secondary" href="#how">شلون تشتغل؟</a></div>
+        <div className="hero-proof"><span><ShieldCheck size={17} /> اتفاق موثق للطرفين</span><span><Clock3 size={17} /> فحص بعد الاستلام</span></div>
       </div>
-      <header className="ohda-header">
-        <a aria-label="عهدة، الصفحة الرئيسية" className="ohda-brand" href="#home">
-          <span className="ohda-brand-mark"><ShieldCheck size={21} strokeWidth={2.1} /></span>
-          <span>عهدة<span className="ohda-brand-latin">OHDA</span></span>
-        </a>
-        <button
-          aria-expanded={menuOpen}
-          aria-label={menuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
-          className="ohda-menu-button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          type="button"
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-        <nav aria-label="القائمة الرئيسية" className={menuOpen ? 'ohda-nav is-open' : 'ohda-nav'}>
-          <a href="#how" onClick={() => setMenuOpen(false)}>شلون تعمل؟</a>
-          <a href="#delivery" onClick={() => setMenuOpen(false)}>طرق التسليم</a>
-          <a href="#questions" onClick={() => setMenuOpen(false)}>أسئلة شائعة</a>
-          <button
-            className="ohda-button ohda-button-nav"
-            onClick={() => {
-              setMenuOpen(false);
-              setDialogOpen(true);
-            }}
-            type="button"
-          >
-            جرّبها
-            <ArrowUpLeft size={16} />
-          </button>
-        </nav>
-      </header>
-
-      <section aria-labelledby="hero-title" className="ohda-hero" id="home">
-        <div className="ohda-hero-glow" />
-        <div className="ohda-hero-content">
-          <span className="ohda-eyebrow"><span /> للصفقات اللي تستاهل الثقة</span>
-          <h1 id="hero-title">
-            بيع وشراء المستعمل،
-            <br />
-            <span>على بيّنة.</span>
-          </h1>
-          <p className="ohda-hero-copy">
-            من تلفونك لتلفون غيرك، خلّ الصفقة تمشي بخطوات واضحة. المبلغ يبقى محفوظ لين الغرض يوصل وينفحص.
-          </p>
-          <div className="ohda-hero-actions">
-            <button className="ohda-button ohda-button-light" onClick={() => setDialogOpen(true)} type="button">
-              جرّب حفظ غرض <ArrowLeft size={17} />
-            </button>
-            <button className="ohda-button ohda-button-outline" onClick={() => setTapDialogOpen(true)} type="button">
-              جرّب محاكاة الدفع <LockKeyhole size={16} />
-            </button>
-            <a className="ohda-text-link" href="#how">اكتشف شلون تعمل <ArrowDown size={16} /></a>
-          </div>
-          <div className="ohda-hero-details">
-            <span><CheckCircle2 size={16} /> بدون تنزيل تطبيق</span>
-            <span><CheckCircle2 size={16} /> محاكاة دفع بدون خصم حقيقي</span>
-          </div>
-        </div>
-
-        <div aria-label="مثال توضيحي لمراحل الصفقة" className="ohda-visual">
-          <div className="ohda-visual-top">
-            <span>شلون تمشي الصفقة</span>
-            <span className="ohda-live-label"><i /> مثال توضيحي</span>
-          </div>
-          <div className="ohda-item-preview">
-            <div className="ohda-item-art"><span className="ohda-phone"><i /></span></div>
-            <div className="ohda-item-info">
-              <span className="ohda-item-kicker">غرض مستعمل</span>
-              <strong>جهازك، بكل وضوح</strong>
-              <span className="ohda-item-price">— د.ك</span>
-            </div>
-          </div>
-          <div className="ohda-progress-list">
-            <div className="ohda-progress-row is-done">
-              <span className="ohda-progress-icon"><Check size={14} /></span>
-              <div><strong>المشتري يدفع</strong><span>المبلغ يظل محفوظ</span></div>
-              <span className="ohda-progress-state">محفوظ</span>
-            </div>
-            <div className="ohda-progress-line" />
-            <div className="ohda-progress-row is-current">
-              <span className="ohda-progress-icon"><PackageCheck size={15} /></span>
-              <div><strong>استلام وفحص</strong><span>خذ وقتك، وتأكد من الغرض</span></div>
-              <span className="ohda-progress-state">الخطوة الجاية</span>
-            </div>
-            <div className="ohda-progress-line" />
-            <div className="ohda-progress-row">
-              <span className="ohda-progress-icon"><CircleCheck size={15} /></span>
-              <div><strong>البائع يستلم</strong><span>بعد تأكيد المشتري</span></div>
-            </div>
-          </div>
-          <div className="ohda-visual-foot"><LockKeyhole size={13} /> تجربة توضيحية — بدون أموال حقيقية</div>
-        </div>
-        <div className="ohda-hero-orbit orbit-one" />
-        <div className="ohda-hero-orbit orbit-two" />
-      </section>
-
-      <div className="ohda-trust-strip">
-        <span><ShieldCheck size={17} /> اتفاق واضح للطرفين</span>
-        <i />
-        <span><Clock3 size={17} /> الفحص بعد الاستلام</span>
-        <i />
-        <span><Handshake size={17} /> حضوري أو بالتوصيل</span>
+      <div className="hero-illustration" aria-label="مراحل اتفاق الصفقة">
+        <div className="illustration-top"><span>ملخص الصفقة</span><span className="demo-tag">تجربة توضيحية</span></div>
+        <div className="agreement-preview"><div className="agreement-icon"><PackageCheck size={24} /></div><div><small>غرض مستعمل</small><strong>اتفاقكم واضح من البداية</strong><small>الطرفين يراجعون التفاصيل</small></div></div>
+        <div className="preview-stage stage-done"><span className="stage-check"><BadgeCheck size={17} /></span><div><b>تم الاتفاق</b><small>السعر والتسليم محددين</small></div><span className="stage-state">مكتمل</span></div>
+        <div className="stage-rule" />
+        <div className="preview-stage stage-next"><span className="stage-check"><LockKeyhole size={16} /></span><div><b>استلام وفحص</b><small>المدة تبدأ بعد الاستلام</small></div><span className="stage-state">التالي</span></div>
+        <div className="stage-rule" />
+        <div className="preview-stage"><span className="stage-check"><Handshake size={16} /></span><div><b>تأكيد الإتمام</b><small>حسب موافقة الطرفين</small></div></div>
+        <div className="illustration-foot"><LockKeyhole size={13} /> عرض توضيحي فقط — لا يوجد تحويل مالي</div>
       </div>
+      <div className="hero-stamp">وضوح<br />من البداية</div>
+    </section>
 
-      <section className="ohda-section ohda-how" id="how">
-        <div className="ohda-section-heading">
-          <span className="ohda-section-label">ببساطة، خطوة بخطوة</span>
-          <h2>ثلاث خطوات. <span>وكل شيء واضح.</span></h2>
-          <p>عهدة ترتب الصفقة بينكم، من أول اتفاق لين تتأكدون إن كل شيء تم مثل ما اتفقتوا.</p>
-        </div>
-        <div className="ohda-steps">
-          {steps.map(({ number, icon: Icon, title, description }, index) => (
-            <article className="ohda-step" key={number}>
-              <div className="ohda-step-top">
-                <span className="ohda-step-icon"><Icon size={23} strokeWidth={1.8} /></span>
-                <span className="ohda-step-number">٠{number}</span>
-              </div>
-              {index < steps.length - 1 && <span aria-hidden="true" className="ohda-step-connector"><ArrowLeft size={17} /></span>}
-              <h3>{title}</h3>
-              <p>{description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+    <section className="assurance-strip" aria-label="مزايا العهدة">
+      <div><WalletCards /><span><b>العمولة تبدأ من ٢٥٠ فلس</b><small>مبلغ واضح قبل الصفقة</small></span></div><div><Clock3 /><span><b>٢٤–٧٢ ساعة</b><small>مدة الفحص تختارونها</small></span></div><div><Truck /><span><b>حضوري أو توصيل</b><small>اختاروا اللي يناسبكم</small></span></div><div><BadgeCheck /><span><b>أول صفقة مجانية</b><small>ما عليها عمولة</small></span></div>
+    </section>
 
-      <section className="ohda-delivery" id="delivery">
-        <div className="ohda-delivery-intro">
-          <span className="ohda-section-label">على راحتكم</span>
-          <h2>اتفقوا على الطريقة.<br /><span>وعهدة تتابع الباقي.</span></h2>
-          <p>سواء تلتقون وجه لوجه أو يوصل الغرض لين بابك، كل صفقة لها خطوات تناسبها.</p>
-        </div>
-        <div className="ohda-way-list">
-          {ways.map(({ icon: Icon, title, description, tag }) => (
-            <article className="ohda-way" key={title}>
-              <span className="ohda-way-icon"><Icon size={22} strokeWidth={1.8} /></span>
-              <div className="ohda-way-content">
-                <div className="ohda-way-heading"><h3>{title}</h3><span>{tag}</span></div>
-                <p>{description}</p>
-              </div>
-              <CheckCircle2 className="ohda-way-check" size={19} />
-            </article>
-          ))}
-        </div>
-      </section>
+    <section className="content-section" id="how">
+      <div className="section-intro"><span className="eyebrow">ببساطة، خطوة بخطوة</span><h2>كل طرف يعرف شنو عليه.</h2><p>عهدة ترتب الاتفاق وتعرض تحديثاته. ما في خطوة مبهمة ولا رسوم مخفية.</p></div>
+        <div className="steps-grid">{steps.map(([title, text], i) => <article className={`step-card ${i === 1 ? "step-held" : ""}`} key={title}><div className="step-number">٠{i + 1}</div><div className="step-mark">{i === 1 ? <LockKeyhole size={19} /> : <span />}</div><h3>{title}</h3><p>{text}</p></article>)}</div>
+    </section>
 
-      <section className="ohda-values">
-        <div>
-          <span className="ohda-section-label">مبنية للناس</span>
-          <h2>صفقات أكثر وضوح.<br /><span>قلق أقل.</span></h2>
-        </div>
-        <div className="ohda-value-grid">
-          <article><span>٠١</span><strong>ارسل الرابط</strong><p>شارك رابط الصفقة مع الطرف الثاني، بدون ما يحتاج ينزّل تطبيق.</p></article>
-          <article><span>٠٢</span><strong>تأكدوا سوا</strong><p>كل طرف يراجع تفاصيله ويأكد من تلفونه، خصوصاً في التسليم الحضوري.</p></article>
-          <article><span>٠٣</span><strong>العمولة من ٢٥٠ فلس</strong><p>رسوم تبدأ من ٢٥٠ فلس. تفاصيل أي رسوم تظهر لكم قبل إتمام الصفقة.</p></article>
-        </div>
-      </section>
+    <section className="delivery-band">
+      <div className="delivery-intro"><span className="eyebrow">على راحتكم</span><h2>تتقابلون أو يوصل لكم؟</h2><p>اختاروا الطريقة اللي تناسب الصفقة. اتفقوا عليها قبل تأكيد التفاصيل.</p></div>
+      <div className="delivery-options">
+        <Card className="delivery-card"><span className="icon-disc"><Handshake size={21} /></span><div><h3>تسليم حضوري</h3><p>تقابلوا، افحصوا الغرض، وكل واحد يأكد من حسابه. ما تتقدم الصفقة إلا بموافقة الطرفين.</p></div><span className="tiny-label">تأكيد الطرفين</span></Card>
+        <Card className="delivery-card"><span className="icon-disc"><Truck size={21} /></span><div><h3>عن طريق التوصيل</h3><p>تتفقون على شركة التوصيل. المشتري يأكد وصول الغرض، وبعدها تبدأ مدة الفحص.</p></div><span className="tiny-label">الفحص بعد الوصول</span></Card>
+      </div>
+    </section>
 
-      <section className="ohda-faq" id="questions">
-        <div className="ohda-faq-heading">
-          <span className="ohda-section-label">قبل لا تبدأ</span>
-          <h2>أسئلة على البال.</h2>
-          <p>التجربة الحالية توضّح الفكرة وتحفظ اسم غرض تجريبي فقط.</p>
-        </div>
-        <div className="ohda-faq-list">
-          <details>
-            <summary>هل أقدر أدفع الحين؟ <ChevronDown size={17} /></summary>
-            <p>تقدر تجرب محاكاة الدفع داخل الموقع بدون إدخال بطاقة أو الاتصال ببوابة. Tap وStripe متاحان للاختبار فقط عند إعداد مفاتيح الاختبار، ولا يتحول شيء للبائع.</p>
-          </details>
-          <details>
-            <summary>هل حفظ اسم الغرض ينشئ صفقة؟ <ChevronDown size={17} /></summary>
-            <p>لا. هذي تجربة تقنية لحفظ الاسم في قاعدة البيانات فقط. ما فيها رابط دعوة أو حجز مبلغ أو اتفاق بين بائع ومشتري.</p>
-          </details>
-          <details>
-            <summary>متى تبدأ مدة الفحص بالتوصيل؟ <ChevronDown size={17} /></summary>
-            <p>تبدأ بعد ما يأكد المشتري إن الغرض وصل، مو من وقت الشحن.</p>
-          </details>
-        </div>
-      </section>
+    <section className="fee-section">
+      <div className="section-intro"><span className="eyebrow">بدون مفاجآت</span><h2>الرسوم واضحة من قبل.</h2><p>الرسوم حسب قيمة الغرض، وتقسيمها بينكم اختياركم.</p></div>
+      <Card className="fee-table-wrap"><table className="fee-table"><thead><tr><th>قيمة الصفقة</th><th>الرسوم</th></tr></thead><tbody><tr><td>إلى ٥٠ د.ك</td><td>٠٫٢٥٠ د.ك</td></tr><tr><td>من ٥٠٫٠٠١ إلى ٢٥٠ د.ك</td><td>٠٫٥٠٠ د.ك</td></tr><tr><td>من ٢٥٠٫٠٠١ إلى ١٬٠٠٠ د.ك</td><td>١٫٠٠٠ د.ك</td></tr><tr><td>من ١٬٠٠٠٫٠٠١ إلى ٥٬٠٠٠ د.ك</td><td>٢٫٠٠٠ د.ك</td></tr><tr><td>أكثر من ٥٬٠٠٠ د.ك</td><td>٣٫٠٠٠ د.ك</td></tr></tbody></table><p className="table-footnote">السيارات لها رسم ثابت ٣٫٠٠٠ د.ك. كل المبالغ بالدينار الكويتي.</p></Card>
+    </section>
 
-      <section className="ohda-final-cta">
-        <div className="ohda-final-icon"><ShieldCheck size={25} /></div>
-        <span>خطوتنا الأولى تبدأ من هنا</span>
-        <h2>خلّ الصفقة أوضح.</h2>
-        <p>جرّب حفظ اسم غرض — خطوة صغيرة في بناء عهدة.</p>
-        <button className="ohda-button ohda-button-light" onClick={() => setDialogOpen(true)} type="button">
-          جرّبها الحين <ArrowLeft size={17} />
-        </button>
-      </section>
+    <section className="feature-callout"><div><span className="eyebrow">اللي ياي بالطريج</span><h2>نبني عهدة على احتياجكم.</h2><p>سجّل اهتمامك بالميزات اللي تهمك. بنعرض لك تأكيد بعد التسجيل.</p></div><div className="feature-pills">
+       <WaitlistButton feature="hawiyati_verification" label="هويتي" /><WaitlistButton feature="smart_assistant" label="مساعد عهدة الذكي" /><WaitlistButton feature="calendar_reminder" label="أضف الموعد للتقويم" /><WaitlistButton feature="sahel_transfer" label="ربط تحويل الملكية بسهل" /><WaitlistButton feature="certified_inspection" label="اطلب فحص معتمد" /><WaitlistButton feature="courier_tracking" label="تتبع مباشر مع شركة التوصيل" />
+    </div></section>
 
-      <footer className="ohda-footer">
-        <a aria-label="عهدة، إلى الأعلى" className="ohda-brand" href="#home">
-          <span className="ohda-brand-mark"><ShieldCheck size={20} /></span>
-          <span>عهدة<span className="ohda-brand-latin">OHDA</span></span>
-        </a>
-        <p>فكرة أوضح لصفقات المستعمل في الكويت.</p>
-        <span className="ohda-footer-note">نسخة تجريبية · بدون مدفوعات حقيقية</span>
-      </footer>
-      <DemoDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
-      <TapPaymentDialog
-        open={tapDialogOpen}
-        onClose={() => {
-          setTapDialogOpen(false);
-          setTapReturnId(null);
-          setStripeReturnSessionId(null);
-        }}
-        returnedAuthorizationId={tapReturnId}
-        returnedStripeSessionId={stripeReturnSessionId}
-      />
-    </main>
-  );
+    <section className="faq-section">
+      <div><span className="eyebrow">قبل لا تبدأ</span><h2>أسئلة على البال.</h2><p>خلّ الصورة واضحة قبل أي اتفاق.</p></div>
+      <div className="faq-list"><details><summary>هل في مدفوعات حقيقية؟</summary><p>لا. عهدة حالياً نسخة تجريبية. أي تكامل دفع متاح للاختبار فقط، وما في تحصيل أو تحويل للبائع.</p></details><details><summary>متى تبدأ مدة الفحص؟</summary><p>بالتوصيل، تبدأ بعد ما يأكد المشتري وصول الغرض. بالتسليم الحضوري، يتأكد الطرفين حسب خطوات الصفقة.</p></details><details><summary>من يدفع رسوم الصفقة؟</summary><p>صاحب الصفقة يختار إذا الرسوم على المشتري أو البائع أو تنقسم بينهم، وتظهر قيمة الرسوم قبل الإنشاء.</p></details><details><summary>شنو يصير إذا في مشكلة؟</summary><p>تقدر تسجل نزاع من تفاصيل الصفقة. حالة النزاع تحتاج متابعة من الطرفين؛ هذي النسخة ما تقدم وساطة فعلية.</p></details></div>
+    </section>
+    <section className="closing-cta"><div className="closing-emblem"><LockKeyhole size={23} /></div><span>الصفقة الواضحة تبدأ باتفاق</span><h2>خلّوا كل شيء بيّن.</h2><Link className="button button-primary" href="/deals/new">ابدأ صفقة الحين <ArrowLeft size={18} /></Link></section>
+  </Shell>;
 }

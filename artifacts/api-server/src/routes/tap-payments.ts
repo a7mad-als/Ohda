@@ -6,10 +6,12 @@ import {
   GetTapAuthorizationResponse,
   GetTapPaymentConfigResponse,
 } from "@workspace/api-zod";
+import { getOhdaPaymentContext } from "./ohda-payment-auth";
 
 const router: IRouter = Router();
 const TAP_API = "https://api.tap.company/v2";
 const AUTO_VOID_HOURS = 24;
+const DEAL_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type TapAuthorizationPayload = {
   id?: unknown;
@@ -35,7 +37,7 @@ function getTapTestCredentials(): { secretKey: string; publicKey: string } | nul
   return { secretKey, publicKey };
 }
 
-function getReturnUrl(): string | null {
+function getReturnUrl(dealId?: string | null): string | null {
   const configuredDomain =
     process.env.NODE_ENV === "production"
       ? process.env.REPLIT_DOMAINS?.split(",")[0]?.trim() ||
@@ -45,7 +47,9 @@ function getReturnUrl(): string | null {
   if (!configuredDomain) return null;
   try {
     const url = new URL(`https://${configuredDomain}`);
-    return `${url.origin}/?tapReturn=1`;
+    return dealId && DEAL_ID_PATTERN.test(dealId)
+      ? `${url.origin}/deals/${dealId}?tapReturn=1`
+      : `${url.origin}/?tapReturn=1`;
   } catch {
     return null;
   }
@@ -77,6 +81,106 @@ router.get("/tap/config", (_req, res): void => {
   );
 });
 
+router.post("/tap/checkouts", async (req, res): Promise<void> => {
+  const input = req.body ?? {};
+  const dealId = typeof input.dealId === "string" && DEAL_ID_PATTERN.test(input.dealId) ? input.dealId : "";
+  const amount = Number(input.amount);
+  const itemName = typeof input.itemName === "string" ? input.itemName.trim() : "";
+  const firstName = typeof input.firstName === "string" ? input.firstName.trim() : "";
+  const lastName = typeof input.lastName === "string" ? input.lastName.trim() : "";
+  const email = typeof input.email === "string" ? input.email.trim() : "";
+  const requestId = typeof input.requestId === "string" ? input.requestId : "";
+  if (
+    !dealId ||
+    !itemName || itemName.length > 120 ||
+    !Number.isFinite(amount) || amount < 0.1 || amount > 2000 ||
+    !firstName || firstName.length > 80 ||
+    !lastName || lastName.length > 80 ||
+    !/^\S+@\S+\.\S+$/.test(email) ||
+    !/^[0-9a-f-]{36}$/i.test(requestId)
+  ) {
+    res.status(400).json({ error: "راجع بيانات الدفع التجريبي مع Tap." });
+    return;
+  }
+  const context = await getOhdaPaymentContext(req, dealId);
+  if (!context) {
+    res.status(401).json({ error: "سجّل دخولك مرة ثانية لبدء الدفع." });
+    return;
+  }
+  if (
+    context.deal.buyer_id !== context.userId ||
+    context.deal.status !== "payment_pending" ||
+    Math.abs(Number(context.deal.amount) - amount) > 0.001
+  ) {
+    res.status(403).json({ error: "ما نقدر نبدأ الدفع لهذه الصفقة أو مبلغها." });
+    return;
+  }
+  const credentials = getTapTestCredentials();
+  const returnUrl = getReturnUrl(dealId);
+  if (!credentials || !returnUrl) {
+    res.status(503).json({ error: "الدفع التجريبي عبر Tap غير مهيأ حالياً." });
+    return;
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${TAP_API}/authorize`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${credentials.secretKey}`,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        amount: Math.round(amount * 1000) / 1000,
+        currency: "KWD",
+        customer_initiated: true,
+        threeDSecure: true,
+        save_card: false,
+        description: `Ohda test checkout: ${itemName}`,
+        reference: { transaction: requestId, order: dealId, idempotent: requestId },
+        customer: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          name: `${firstName} ${lastName}`,
+        },
+        source: { id: "src_all" },
+        auto: {
+          type: "VOID",
+          time: [24, 48, 72].includes(Number(input.inspectionHours))
+            ? Number(input.inspectionHours)
+            : AUTO_VOID_HOURS,
+        },
+        redirect: { url: returnUrl },
+      }),
+      signal: AbortSignal.timeout(12_000),
+    });
+  } catch {
+    req.log.error("Tap hosted test checkout request failed");
+    res.status(502).json({ error: "تعذر فتح صفحة الدفع التجريبية لدى Tap." });
+    return;
+  }
+  let payload: TapAuthorizationPayload;
+  try {
+    payload = await response.json() as TapAuthorizationPayload;
+  } catch {
+    res.status(502).json({ error: "تعذر قراءة رد Tap." });
+    return;
+  }
+  const redirectUrl = getSafeTapRedirect(payload.transaction?.url);
+  if (
+    !response.ok ||
+    typeof payload.id !== "string" ||
+    !payload.id.startsWith("auth_") ||
+    !redirectUrl
+  ) {
+    req.log.error({ statusCode: response.status }, "Tap rejected the hosted test checkout");
+    res.status(502).json({ error: "Tap ما جهّز صفحة الدفع التجريبية. تحقق من حساب الاختبار." });
+    return;
+  }
+  res.status(201).json({ authorizationId: payload.id, status: payload.status, redirectUrl });
+});
+
 router.post("/tap/authorizations", async (req, res): Promise<void> => {
   const parsed = CreateTapAuthorizationBody.safeParse(req.body);
   if (!parsed.success) {
@@ -85,7 +189,11 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
   }
 
   const credentials = getTapTestCredentials();
-  const redirectUrl = getReturnUrl();
+  const dealId =
+    typeof req.body?.dealId === "string" && DEAL_ID_PATTERN.test(req.body.dealId)
+      ? req.body.dealId
+      : null;
+  const redirectUrl = getReturnUrl(dealId);
   if (!credentials || !redirectUrl) {
     req.log.warn(
       {
@@ -99,6 +207,23 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
   }
 
   const input = parsed.data;
+  if (!dealId) {
+    res.status(400).json({ error: "يجب ربط الدفع التجريبي بصفقة." });
+    return;
+  }
+  const context = await getOhdaPaymentContext(req, dealId);
+  if (!context) {
+    res.status(401).json({ error: "سجّل دخولك مرة ثانية لبدء الدفع." });
+    return;
+  }
+  if (
+    context.deal.buyer_id !== context.userId ||
+    context.deal.status !== "payment_pending" ||
+    Math.abs(Number(context.deal.amount) - input.amount) > 0.001
+  ) {
+    res.status(403).json({ error: "ما نقدر نبدأ الدفع لهذه الصفقة أو مبلغها." });
+    return;
+  }
   const reference = input.requestId;
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
@@ -131,7 +256,12 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
           name: `${firstName} ${lastName}`,
         },
         source: { id: input.tokenId },
-        auto: { type: "VOID", time: AUTO_VOID_HOURS },
+        auto: {
+          type: "VOID",
+          time: [24, 48, 72].includes(Number(req.body?.inspectionHours))
+            ? Number(req.body.inspectionHours)
+            : AUTO_VOID_HOURS,
+        },
         redirect: { url: redirectUrl },
       }),
       signal: AbortSignal.timeout(12_000),
@@ -175,6 +305,20 @@ router.get("/tap/authorizations/:id", async (req, res): Promise<void> => {
   const params = GetTapAuthorizationParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "رقم الحجز غير صحيح." });
+    return;
+  }
+  const dealId = typeof req.query.dealId === "string" ? req.query.dealId : "";
+  const context = await getOhdaPaymentContext(req, dealId);
+  if (!context) {
+    res.status(401).json({ error: "سجّل دخولك مرة ثانية للتحقق من الدفع." });
+    return;
+  }
+  if (
+    context.deal.buyer_id !== context.userId ||
+    !["payment_pending", "funded"].includes(context.deal.status) ||
+    (context.deal.payment_reference && context.deal.payment_reference !== params.data.id)
+  ) {
+    res.status(403).json({ error: "هذا الحجز غير مرتبط بصفقتك." });
     return;
   }
 
@@ -236,6 +380,134 @@ router.get("/tap/authorizations/:id", async (req, res): Promise<void> => {
       currency: payload.currency,
     }),
   );
+});
+
+router.post("/tap/settlements", async (req, res): Promise<void> => {
+  const authorizationId =
+    typeof req.body?.authorizationId === "string" ? req.body.authorizationId.trim() : "";
+  const action = req.body?.action;
+  if (
+    !/^auth_[A-Za-z0-9]+$/.test(authorizationId) ||
+    (action !== "capture" && action !== "void")
+  ) {
+    res.status(400).json({ error: "بيانات تسوية Tap غير صحيحة." });
+    return;
+  }
+  const dealId = typeof req.body?.dealId === "string" ? req.body.dealId : "";
+  const context = await getOhdaPaymentContext(req, dealId);
+  if (!context) {
+    res.status(401).json({ error: "سجّل دخولك مرة ثانية لإتمام التسوية." });
+    return;
+  }
+  const deal = context.deal;
+  const allowedStates = action === "capture" ? ["authorized"] : ["pending", "authorized"];
+  const allowedStatuses = action === "capture"
+    ? ["funded", "inspection", "disputed"]
+    : ["payment_pending", "funded", "disputed"];
+  if (
+    (!context.isAdmin && deal.buyer_id !== context.userId && deal.seller_id !== context.userId) ||
+    deal.payment_provider !== "tap" ||
+    deal.payment_reference !== authorizationId ||
+    !allowedStates.includes(deal.payment_state) ||
+    !allowedStatuses.includes(deal.status) ||
+    Math.abs(Number(deal.amount) - Number(req.body?.amount)) > 0.001
+  ) {
+    res.status(403).json({ error: "لا يمكن تسوية هذا الحجز لهذه الصفقة." });
+    return;
+  }
+  const credentials = getTapTestCredentials();
+  if (!credentials) {
+    res.status(503).json({ error: "إعداد Tap للاختبار غير متاح." });
+    return;
+  }
+
+  const input = {
+    firstName: typeof req.body?.firstName === "string" ? req.body.firstName.trim() : "",
+    lastName: typeof req.body?.lastName === "string" ? req.body.lastName.trim() : "",
+    email: typeof req.body?.email === "string" ? req.body.email.trim() : "",
+    amount: Number(req.body?.amount),
+    requestId: typeof req.body?.requestId === "string" ? req.body.requestId : "",
+  };
+  if (
+    action === "capture" &&
+    (!input.firstName || !input.lastName || !/^\S+@\S+\.\S+$/.test(input.email) ||
+      !Number.isFinite(input.amount) || input.amount <= 0 ||
+      input.amount > 1000000 || !/^[A-Za-z0-9_-]{8,120}$/.test(input.requestId))
+  ) {
+    res.status(400).json({ error: "بيانات استلام المبلغ غير مكتملة." });
+    return;
+  }
+
+  const url = action === "void"
+    ? `${TAP_API}/authorize/${encodeURIComponent(authorizationId)}/void`
+    : `${TAP_API}/charges`;
+  const returnUrl = getReturnUrl();
+  if (action === "capture" && !returnUrl) {
+    res.status(503).json({ error: "رابط العودة الآمن غير مهيأ لتسوية Tap." });
+    return;
+  }
+  const body = action === "capture"
+    ? {
+        amount: Math.round(input.amount * 1000) / 1000,
+        currency: "KWD",
+        customer_initiated: true,
+        threeDSecure: true,
+        save_card: false,
+        description: `Ohda test settlement ${input.requestId}`,
+        reference: {
+          transaction: input.requestId,
+          order: input.requestId,
+          idempotent: input.requestId,
+        },
+        customer: {
+          first_name: input.firstName,
+          last_name: input.lastName,
+          email: input.email,
+          name: `${input.firstName} ${input.lastName}`,
+        },
+        source: { id: authorizationId },
+        redirect: { url: returnUrl },
+      }
+    : undefined;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${credentials.secretKey}`,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: AbortSignal.timeout(12_000),
+    });
+  } catch {
+    req.log.error("Tap test settlement request failed");
+    res.status(502).json({ error: "تعذر تنفيذ عملية Tap التجريبية." });
+    return;
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = await response.json() as Record<string, unknown>;
+  } catch {
+    req.log.error({ statusCode: response.status }, "Tap settlement response was unreadable");
+    res.status(502).json({ error: "تعذر قراءة رد Tap." });
+    return;
+  }
+
+  const expectedStatus = action === "capture" ? "CAPTURED" : "VOID";
+  if (!response.ok || payload.status !== expectedStatus) {
+    req.log.error({ statusCode: response.status, action }, "Tap did not confirm test settlement");
+    res.status(502).json({ error: "Tap ما أكد عملية التسوية التجريبية." });
+    return;
+  }
+  res.json({
+    action,
+    status: expectedStatus,
+    reference: typeof payload.id === "string" ? payload.id : authorizationId,
+  });
 });
 
 export default router;

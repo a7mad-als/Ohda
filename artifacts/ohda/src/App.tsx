@@ -5,6 +5,11 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/home';
+import '@/ohda.css';
+import { LoginPage, SignupPage } from '@/pages/auth';
+import { NewDealPage } from '@/pages/deal-create';
+import { DealsPage, DealDetailPage, InvitePage, LiveHandoverPage } from '@/pages/deals';
+import { ProfilePage, AdminPage } from '@/pages/account';
 import {
   Route,
   Switch,
@@ -22,6 +27,15 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/login" component={LoginPage} />
+        <Route path="/signup" component={SignupPage} />
+        <Route path="/deals/new" component={NewDealPage} />
+        <Route path="/deals" component={DealsPage} />
+        <Route path="/deals/:id/live" component={LiveHandoverPage} />
+        <Route path="/deals/:id" component={DealDetailPage} />
+        <Route path="/j/:code" component={InvitePage} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route path="/admin" component={AdminPage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
