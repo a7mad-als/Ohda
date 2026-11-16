@@ -31,7 +31,7 @@ type StripePaymentIntent = {
 
 function stripeErrorDetails(
   payload: Record<string, unknown> | null,
-): { type?: string; code?: string; param?: string; message?: string } {
+): { type?: string; code?: string; param?: string } {
   const error = payload?.error;
   if (!error || typeof error !== "object" || Array.isArray(error)) return {};
   const fields = error as Record<string, unknown>;
@@ -39,13 +39,6 @@ function stripeErrorDetails(
     ...(typeof fields.type === "string" ? { type: fields.type } : {}),
     ...(typeof fields.code === "string" ? { code: fields.code } : {}),
     ...(typeof fields.param === "string" ? { param: fields.param } : {}),
-    ...(typeof fields.message === "string"
-      ? {
-          message: fields.message
-            .slice(0, 200)
-            .replace(/sk_(?:test|live)_[A-Za-z0-9]+/g, "[redacted]"),
-        }
-      : {}),
   };
 }
 
@@ -135,9 +128,9 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
     success_url: `${appOrigin}/?stripeReturn=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appOrigin}/?stripeCancel=1`,
     customer_email: input.email.trim(),
-    "line_items[0][price_data][currency]": "kwd",
+    "line_items[0][price_data][currency]": "usd",
     "line_items[0][price_data][unit_amount]": String(
-      Math.round(input.amount * 1000),
+      Math.round(input.amount * 100),
     ),
     "line_items[0][price_data][product_data][name]": input.itemName.trim(),
     "line_items[0][quantity]": "1",
@@ -170,9 +163,6 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
 
   const payload = await readStripeJson(response);
   const stripeError = stripeErrorDetails(payload);
-  const supportsKwd =
-    stripeError.param === "line_items[0][price_data][currency]" &&
-    stripeError.message?.toLowerCase().startsWith("invalid currency: kwd");
   if (
     !response.ok ||
     typeof payload?.id !== "string" ||
@@ -190,12 +180,6 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
       },
       "Stripe rejected test authorization checkout",
     );
-    if (supportsKwd) {
-      res.status(503).json({
-        error: "حساب Stripe التجريبي لا يدعم الدينار الكويتي حالياً. فعّل دعم KWD في إعدادات Stripe ثم أعد المحاولة.",
-      });
-      return;
-    }
     res.status(502).json({ error: "لم يقبل Stripe الحجز التجريبي. تحقق من إعداد حساب الاختبار." });
     return;
   }
@@ -290,12 +274,12 @@ router.get(
       paymentIntent.id.startsWith("pi_") &&
       amountTotal !== null &&
       paymentIntentAmount === amountTotal &&
-      currency === "KWD" &&
-      paymentIntentCurrency === "KWD" &&
+      currency === "USD" &&
+      paymentIntentCurrency === "USD" &&
       paymentIntent.metadata?.requestId === payload.metadata?.requestId &&
       typeof payload.metadata?.requestId === "string";
 
-    if (amountTotal === null || currency !== "KWD") {
+    if (amountTotal === null || currency !== "USD") {
       req.log.error(
         { statusCode: response.status },
         "Stripe authorization amount or currency could not be verified",
@@ -309,7 +293,7 @@ router.get(
         authorizationId:
           typeof paymentIntent?.id === "string" ? paymentIntent.id : payload.id,
         status: isVerifiedAuthorization ? "AUTHORIZED" : "NOT_AUTHORIZED",
-        amount: amountTotal / 1000,
+        amount: amountTotal / 100,
         currency,
       }),
     );

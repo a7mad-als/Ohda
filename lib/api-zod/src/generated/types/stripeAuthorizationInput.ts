@@ -13,7 +13,7 @@ export interface StripeAuthorizationInput {
      */
   itemName: string;
   /**
-     * @minimum 0.1
+     * @minimum 0.5
      * @maximum 2000
      */
   amount: number;

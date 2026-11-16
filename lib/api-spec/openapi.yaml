@@ -92,7 +92,7 @@ paths:
     post:
       operationId: createStripeAuthorization
       tags: [payments]
-      summary: Create a test Stripe authorization hold
+      summary: Create a USD test Stripe authorization hold
       requestBody:
         required: true
         content:
@@ -256,7 +256,7 @@ components:
           maxLength: 120
         amount:
           type: number
-          minimum: 0.1
+          minimum: 0.5
           maximum: 2000
         firstName:
           type: string

@@ -319,7 +319,7 @@ export default function Home() {
           </div>
           <div className="ohda-hero-details">
             <span><CheckCircle2 size={16} /> بدون تنزيل تطبيق</span>
-            <span><CheckCircle2 size={16} /> من ٢٠ إلى ٢٬٠٠٠ د.ك</span>
+            <span><CheckCircle2 size={16} /> Tap بالدينار، Stripe بالدولار</span>
           </div>
         </div>
 
@@ -430,7 +430,7 @@ export default function Home() {
         <div className="ohda-faq-list">
           <details>
             <summary>هل أقدر أدفع الحين؟ <ChevronDown size={17} /></summary>
-            <p>تقدر تختبر حجز البطاقة عبر Tap بمفتاح الاختبار فقط. ما ينخصم مبلغ حقيقي ولا يتحول شيء للبائع، وStripe غير مفعّل حالياً.</p>
+            <p>تقدر تختبر حجز البطاقة عبر Tap بالدينار أو Stripe بالدولار. ما ينخصم مبلغ حقيقي ولا يتحول شيء للبائع.</p>
           </details>
           <details>
             <summary>هل حفظ اسم الغرض ينشئ صفقة؟ <ChevronDown size={17} /></summary>

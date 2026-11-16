@@ -76,11 +76,11 @@ export const GetStripePaymentConfigResponse = zod.object({
 
 
 /**
- * @summary Create a test Stripe authorization hold
+ * @summary Create a USD test Stripe authorization hold
  */
 export const createStripeAuthorizationBodyItemNameMax = 120;
 
-export const createStripeAuthorizationBodyAmountMin = 0.1;
+export const createStripeAuthorizationBodyAmountMin = 0.5;
 export const createStripeAuthorizationBodyAmountMax = 2000;
 
 export const createStripeAuthorizationBodyFirstNameMax = 80;

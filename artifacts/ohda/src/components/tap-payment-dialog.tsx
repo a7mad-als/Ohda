@@ -85,6 +85,12 @@ function statusMessage(provider: PaymentProvider, status: string): string {
   }
 }
 
+function formatPaymentAmount(amount: number, currency: string): string {
+  return currency === "KWD"
+    ? `${amount.toFixed(3)} د.ك`
+    : `$${amount.toFixed(2)} USD`;
+}
+
 export function TapPaymentDialog({
   open,
   onClose,
@@ -105,7 +111,8 @@ export function TapPaymentDialog({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [itemName, setItemName] = useState("");
-  const [amount, setAmount] = useState("20");
+  const [tapAmount, setTapAmount] = useState("20");
+  const [stripeAmount, setStripeAmount] = useState("20");
   const [requestId, setRequestId] = useState("");
   const [cardReady, setCardReady] = useState(false);
   const [cardValid, setCardValid] = useState(false);
@@ -218,15 +225,23 @@ export function TapPaymentDialog({
     provider === "tap"
       ? Boolean(tapConfig?.enabled && tapConfig.publicKey)
       : Boolean(stripeConfig?.enabled);
+  const amount = provider === "tap" ? tapAmount : stripeAmount;
+  const setAmount = provider === "tap" ? setTapAmount : setStripeAmount;
   const numericAmount = Number(amount);
+  const minimumAmount = provider === "tap" ? 0.1 : 0.5;
+  const amountScale = provider === "tap" ? 1000 : 100;
+  const amountIsValid =
+    Number.isFinite(numericAmount) &&
+    numericAmount >= minimumAmount &&
+    numericAmount <= 2000 &&
+    Math.abs(numericAmount * amountScale - Math.round(numericAmount * amountScale)) < 1e-7;
   const canContinue =
     selectedProviderEnabled &&
     itemName.trim().length > 0 &&
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     email.includes("@") &&
-    numericAmount >= 0.1 &&
-    numericAmount <= 2000;
+    amountIsValid;
   const canTokenize =
     cardStep &&
     requestId.length > 0 &&
@@ -238,8 +253,7 @@ export function TapPaymentDialog({
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     email.includes("@") &&
-    numericAmount >= 0.1 &&
-    numericAmount <= 2000 &&
+    amountIsValid &&
     !tokenizing &&
     !mutationLoading;
 
@@ -251,7 +265,7 @@ export function TapPaymentDialog({
     try {
       const checkout = await createStripeAuthorization({
         itemName: itemName.trim(),
-        amount: Math.round(numericAmount * 1000) / 1000,
+        amount: Math.round(numericAmount * 100) / 100,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
@@ -370,7 +384,7 @@ export function TapPaymentDialog({
             : `جرّب حجز مبلغ مع ${provider === "tap" ? "Tap" : "Stripe"}`}
         </h2>
 
-        {status || returnedAuthorizationId || returnedStripeSessionId ? (
+            {status || returnedAuthorizationId || returnedStripeSessionId ? (
           <div aria-live="polite" className="ohda-payment-result">
             {statusLoading ||
             ((returnedAuthorizationId || returnedStripeSessionId) &&
@@ -394,7 +408,7 @@ export function TapPaymentDialog({
               <>
                 <div className="ohda-payment-result-icon"><Check size={20} /></div>
                   <strong>{statusMessage(statusProvider, status.status)}</strong>
-                <span>{status.amount.toFixed(3)} د.ك · {status.status}</span>
+                <span>{formatPaymentAmount(status.amount, status.currency)} · {status.status}</span>
                 <p className="ohda-dialog-copy">
                   هذه عملية اختبار فقط. لا يوجد تحويل للبائع.
                   {statusProvider === "tap" &&
@@ -416,7 +430,7 @@ export function TapPaymentDialog({
         ) : (
           <>
             <p className="ohda-dialog-copy">
-              اختر Tap أو Stripe لإجراء حجز بطاقة تجريبي. لا يتم تحصيل أموال حقيقية.
+              Tap بالدينار الكويتي وStripe بالدولار الأمريكي. كلاهما للاختبار فقط ولا يحصّل أموالاً حقيقية.
             </p>
 
             <div aria-label="بوابة الدفع" className="ohda-payment-providers">
@@ -432,7 +446,7 @@ export function TapPaymentDialog({
                 }}
                 type="button"
               >
-                Tap <small>اختبار</small>
+                Tap <small>اختبار · KWD</small>
               </button>
               <button
                 aria-pressed={provider === "stripe"}
@@ -447,12 +461,14 @@ export function TapPaymentDialog({
                 title={!stripeConfig?.enabled ? "Stripe غير مهيأ للاختبار" : undefined}
                 type="button"
               >
-                Stripe <small>{stripeConfig?.enabled ? "اختبار" : "غير مهيأ"}</small>
+                Stripe <small>{stripeConfig?.enabled ? "اختبار · USD" : "غير مهيأ"}</small>
               </button>
             </div>
 
             {configLoading ? (
-              <p className="ohda-payment-loading">جاري تجهيز نموذج Tap…</p>
+              <p className="ohda-payment-loading">
+                جاري تجهيز {provider === "tap" ? "نموذج Tap" : "Stripe"}…
+              </p>
               ) : !selectedProviderEnabled ? (
               <p className="ohda-payment-unavailable" role="alert">
                 {provider === "tap"
@@ -472,14 +488,16 @@ export function TapPaymentDialog({
                   value={itemName}
                 />
 
-                <label htmlFor="tap-amount">المبلغ بالدينار الكويتي</label>
+                <label htmlFor="tap-amount">
+                  {provider === "tap" ? "المبلغ بالدينار الكويتي" : "المبلغ بالدولار الأمريكي"}
+                </label>
                 <input
                   id="tap-amount"
                   inputMode="decimal"
                   max="2000"
-                  min="0.1"
+                  min={minimumAmount}
                   onChange={(event) => setAmount(event.target.value)}
-                  step="0.001"
+                  step={provider === "tap" ? "0.001" : "0.01"}
                   type="number"
                   disabled={cardStep}
                   value={amount}
@@ -524,7 +542,7 @@ export function TapPaymentDialog({
                   <>
                     <div className="ohda-payment-summary">
                       <strong>{itemName.trim()}</strong>
-                      <span>{numericAmount.toFixed(3)} د.ك</span>
+                      <span>{formatPaymentAmount(numericAmount, "KWD")}</span>
                       <button
                         className="ohda-payment-edit"
                         disabled={tokenizing || mutationLoading}

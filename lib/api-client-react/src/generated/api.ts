@@ -388,7 +388,7 @@ export const getCreateStripeAuthorizationUrl = () => {
 }
 
 /**
- * @summary Create a test Stripe authorization hold
+ * @summary Create a USD test Stripe authorization hold
  */
 export const createStripeAuthorization = async (stripeAuthorizationInput: StripeAuthorizationInput, options?: Parameters<typeof customFetch>[1]): Promise<StripeAuthorizationReceipt> => {
 
@@ -454,7 +454,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateStripeAuthorizationMutationVariables = {data: BodyType<StripeAuthorizationInput>}
 
     /**
- * @summary Create a test Stripe authorization hold
+ * @summary Create a USD test Stripe authorization hold
  */
 export const useCreateStripeAuthorization = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStripeAuthorization>>, TError,CreateStripeAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
