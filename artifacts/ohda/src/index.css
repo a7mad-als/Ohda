@@ -1509,7 +1509,7 @@
 
 .ohda-payment-providers {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 16px;
 }
@@ -1652,6 +1652,22 @@
 .ohda-payment-unavailable {
   color: #8b3434;
   background: #fbefec;
+}
+
+.ohda-demo-notice {
+  display: grid;
+  min-height: 210px;
+  align-content: center;
+  padding: 20px;
+  color: #315b4a;
+  background: #f1f5ee;
+  font-size: 12px;
+  line-height: 1.9;
+  text-align: center;
+}
+
+.ohda-demo-notice p {
+  margin: 5px 0 0;
 }
 
 .ohda-payment-result {

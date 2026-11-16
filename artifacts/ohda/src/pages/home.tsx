@@ -313,13 +313,13 @@ export default function Home() {
               جرّب حفظ غرض <ArrowLeft size={17} />
             </button>
             <button className="ohda-button ohda-button-outline" onClick={() => setTapDialogOpen(true)} type="button">
-              اختبر حجز Tap <LockKeyhole size={16} />
+              جرّب محاكاة الدفع <LockKeyhole size={16} />
             </button>
             <a className="ohda-text-link" href="#how">اكتشف شلون تعمل <ArrowDown size={16} /></a>
           </div>
           <div className="ohda-hero-details">
             <span><CheckCircle2 size={16} /> بدون تنزيل تطبيق</span>
-            <span><CheckCircle2 size={16} /> Tap بالدينار، Stripe بالدولار</span>
+            <span><CheckCircle2 size={16} /> محاكاة دفع بدون خصم حقيقي</span>
           </div>
         </div>
 
@@ -354,7 +354,7 @@ export default function Home() {
               <div><strong>البائع يستلم</strong><span>بعد تأكيد المشتري</span></div>
             </div>
           </div>
-          <div className="ohda-visual-foot"><LockKeyhole size={13} /> Tap للاختبار فقط — بدون أموال حقيقية</div>
+          <div className="ohda-visual-foot"><LockKeyhole size={13} /> تجربة توضيحية — بدون أموال حقيقية</div>
         </div>
         <div className="ohda-hero-orbit orbit-one" />
         <div className="ohda-hero-orbit orbit-two" />
@@ -430,7 +430,7 @@ export default function Home() {
         <div className="ohda-faq-list">
           <details>
             <summary>هل أقدر أدفع الحين؟ <ChevronDown size={17} /></summary>
-            <p>تقدر تختبر حجز البطاقة عبر Tap بالدينار أو Stripe بالدولار. ما ينخصم مبلغ حقيقي ولا يتحول شيء للبائع.</p>
+            <p>تقدر تجرب محاكاة الدفع داخل الموقع بدون إدخال بطاقة أو الاتصال ببوابة. Tap وStripe متاحان للاختبار فقط عند إعداد مفاتيح الاختبار، ولا يتحول شيء للبائع.</p>
           </details>
           <details>
             <summary>هل حفظ اسم الغرض ينشئ صفقة؟ <ChevronDown size={17} /></summary>
