@@ -7,12 +7,12 @@ import { DealPaymentSheet } from "@/components/deal-payment-sheet";
 import { QRCodeSVG } from "qrcode.react";
 
 function statusTitle(status: string) {
-  const names: Record<string, string> = { created: "بانتظار الطرف الثاني", pending: "بانتظار الطرف الثاني", awaiting_acceptance: "بانتظار الموافقة", awaiting_payment: "بانتظار الدفع", payment_pending: "جاري التحقق من الدفع", funded: "المبلغ محفوظ في العهدة", payment_authorized: "تأكيد اختبار الدفع", authorized: "تأكيد اختبار الدفع", shipped: "بالطريق", delivered: "وصل الغرض", inspection: "فترة الفحص", completed: "مكتملة", disputed: "فيها نزاع", refunded: "تم رد المبلغ", cancelled: "ملغاة", live_handover: "تسليم حضوري" };
+  const names: Record<string, string> = { created: "بانتظار الطرف الثاني", pending: "بانتظار الطرف الثاني", awaiting_acceptance: "بانتظار الموافقة", awaiting_payment: "بانتظار الدفع", payment_pending: "جاري التحقق من الدفع", funded: "المبلغ محفوظ في العهدة", payment_authorized: "تم حجز المبلغ", authorized: "تم حجز المبلغ", shipped: "بالطريق", delivered: "وصل الغرض", inspection: "فترة الفحص", completed: "مكتملة", disputed: "فيها نزاع", refunded: "تم رد المبلغ", cancelled: "ملغاة", live_handover: "تسليم حضوري" };
   return names[status.toLowerCase()] || status.replaceAll("_", " ");
 }
 function eventTitle(event: DealEvent) {
   if (event.event_type === "status_changed" && event.new_status) return `تغيرت الحالة إلى: ${statusTitle(event.new_status)}`;
-  const labels: Record<string, string> = { created: "انعملت الصفقة", joined: "انضم الطرف الثاني", accepted: "تم تأكيد الاتفاق", payment_authorized: "تأكد حجز الاختبار", shipped: "تم تسجيل الشحن", delivery_confirmed: "تأكد استلام الغرض", inspection_started: "بدأت مدة الفحص", completed: "اكتملت الصفقة", disputed: "تم تسجيل نزاع", live_approved: "تم تأكيد التسليم الحضوري" };
+  const labels: Record<string, string> = { created: "انعملت الصفقة", joined: "انضم الطرف الثاني", accepted: "تم تأكيد الاتفاق", payment_authorized: "تم حجز المبلغ في العهدة", shipped: "تم تسجيل الشحن", delivery_confirmed: "تأكد استلام الغرض", inspection_started: "بدأت مدة الفحص", completed: "اكتملت الصفقة", disputed: "تم تسجيل نزاع", live_approved: "تم تأكيد التسليم الحضوري" };
   return labels[event.event_type] || event.event_type.replaceAll("_", " ");
 }
 function inspectionRemaining(deadline: string, now: number) {
@@ -153,7 +153,7 @@ export function DealDetailPage() {
     const timer = window.setInterval(async () => {
       if (expiryRunning.current || new Date(deal.inspection_deadline as string).getTime() > Date.now()) return;
       if (!deal.payment_provider || !deal.payment_reference || !["tap", "stripe"].includes(deal.payment_provider)) {
-        setActionError("انتهت مدة الفحص لكن ما في حجز اختبار مرتبط؛ تواصلوا مع المشرف قبل أي إجراء.");
+        setActionError("انتهت مدة الفحص لكن ما في حجز مرتبط؛ تواصلوا مع الدعم قبل أي إجراء.");
         return;
       }
       expiryRunning.current = true;
@@ -170,7 +170,7 @@ export function DealDetailPage() {
         await applyDealAction(session, "expire", { deal_id: deal.id });
         await reload(true);
       } catch (cause) {
-        setActionError(cause instanceof Error ? cause.message : "انتهى وقت الفحص، لكن تعذر إتمام التسوية التجريبية.");
+        setActionError(cause instanceof Error ? cause.message : "انتهى وقت الفحص، لكن تعذر إتمام التسوية.");
       } finally { expiryRunning.current = false; }
     }, 30_000);
     return () => window.clearInterval(timer);
@@ -195,7 +195,7 @@ export function DealDetailPage() {
       if (normalized === "awaiting_payment") await applyDealAction(session, "payment_pending", { deal_id: id });
       await reload(true);
       setPaymentOpen(true);
-    } catch (cause) { setActionError(cause instanceof Error ? cause.message : "تعذر بدء الدفع التجريبي."); }
+    } catch (cause) { setActionError(cause instanceof Error ? cause.message : "تعذر بدء الدفع."); }
     finally { setBusy(false); }
   }
   async function runCompletion() {
@@ -206,7 +206,7 @@ export function DealDetailPage() {
     setBusy(true); setActionError("");
     try {
       const me = people.find((person) => person.id === session.user.id);
-      const names = (me?.display_name || "Ohda Test").trim().split(/\s+/);
+      const names = (me?.display_name || "Ohda Customer").trim().split(/\s+/);
       await settleTestPayment({
         provider: deal.payment_provider as "tap" | "stripe",
         session,
@@ -220,7 +220,7 @@ export function DealDetailPage() {
       });
       await applyDealAction(session, "complete", { deal_id: id });
       await reload(true);
-    } catch (cause) { setActionError(cause instanceof Error ? cause.message : "تعذر إتمام الصفقة التجريبية."); }
+    } catch (cause) { setActionError(cause instanceof Error ? cause.message : "تعذر إتمام الصفقة."); }
     finally { setBusy(false); }
   }
   async function runDispute() {
@@ -257,7 +257,7 @@ export function DealDetailPage() {
     try {
       if (action === "cancel" && deal && ["pending", "authorized"].includes(deal.payment_state.toLowerCase())) {
         if (deal.payment_reference && deal.payment_provider && ["tap", "stripe"].includes(deal.payment_provider)) {
-          const names = (people.find((person) => person.id === session.user.id)?.display_name || "Ohda Test").trim().split(/\s+/);
+          const names = (people.find((person) => person.id === session.user.id)?.display_name || "Ohda Customer").trim().split(/\s+/);
           await settleTestPayment({
             provider: deal.payment_provider as "tap" | "stripe",
             session,
@@ -299,18 +299,19 @@ export function DealDetailPage() {
     <div className="detail-back"><Link href="/deals">← كل الصفقات</Link><span>رمز الصفقة: <b dir="ltr">{deal.code}</b></span></div>
     <div className="deal-detail-grid"><div className="detail-main">
       <Card className="deal-summary"><div className="summary-top"><span className={`status-chip status-${normalized}`}>{statusTitle(deal.status)}</span><span className="summary-date">{new Date(deal.created_at).toLocaleDateString("ar-KW")}</span></div><h1>{deal.item_name}</h1><p>{deal.description || "ما في وصف إضافي."}</p><div className="summary-price"><span>قيمة الصفقة</span><strong>{formatKwd(deal.amount)}</strong></div><div className="summary-meta"><span>{deal.category}</span><span>{deal.inspection_hours} ساعة فحص</span><span>{deal.delivery_method === "delivery" ? "عن طريق التوصيل" : "تسليم حضوري"}</span></div></Card>
-      {paymentAuthorized && <div className="held-seal" role="status"><span className="seal-icon"><LockKeyholeIcon /></span><div><strong>المبلغ محفوظ في العهدة</strong><small>تأكيد اختبار فقط — لا يوجد تحصيل أو تحويل أموال حقيقية.</small></div><span className="test-label">اختبار</span></div>}
-       {!paymentAuthorized && <div className="test-notice"><strong>نسخة تجريبية — الدفع تجريبي بدون خصم حقيقي.</strong> {normalized === "awaiting_payment" || normalized === "payment_pending" ? "اختر Tap أو Stripe لإكمال الحجز التجريبي." : "ما في حجز مؤكد مرتبط بالصفقة."}</div>}
+      {paymentAuthorized && <div className="held-seal" role="status"><span className="seal-icon"><LockKeyholeIcon /></span><div><strong>المبلغ محفوظ في العهدة</strong><small>ما ينصرف للبائع إلا بعد تأكيد المشتري أو انتهاء مدة الفحص.</small></div><span className="test-label">محفوظ</span></div>}
+       {!paymentAuthorized && <div className="test-notice"><strong>المبلغ غير محجوز للحين.</strong> {normalized === "awaiting_payment" || normalized === "payment_pending" ? "اختر Tap أو Stripe لحجز المبلغ في العهدة." : "يتحجز المبلغ بعد موافقة الطرفين ودفع المشتري."}</div>}
       <Card className="participants-card"><h2 className="card-title">أطراف الصفقة</h2><div className="people-row"><Person label="البائع" name={deal.seller_id === session.user.id ? "أنت" : people.find(p => p.id === deal.seller_id)?.display_name || (deal.seller_id ? "عضو عهدة" : "بانتظار الانضمام")} /><Person label="المشتري" name={deal.buyer_id === session.user.id ? "أنت" : people.find(p => p.id === deal.buyer_id)?.display_name || (deal.buyer_id ? "عضو عهدة" : "بانتظار الانضمام")} /></div>{["created", "awaiting_acceptance"].includes(normalized) && <div className="invite-share"><div><strong>شارك الدعوة</strong><small>الطرف الثاني يقدر يراجع تفاصيل الاتفاق.</small></div><button className="icon-button" aria-label="نسخ رابط الدعوة" onClick={() => void copyInvite()}><Copy size={17} />{copied ? "اننسخ" : "نسخ الرابط"}</button></div>}</Card>
       <Card className="timeline-card"><h2 className="card-title">مسار الصفقة</h2>{events.length ? <ol className="timeline">{events.map((event, i) => <li key={event.id}><span className={i === events.length - 1 ? "timeline-dot current" : "timeline-dot"} /><div><strong>{eventTitle(event)}</strong><small>{new Date(event.created_at).toLocaleString("ar-KW", { dateStyle: "medium", timeStyle: "short" })}</small></div></li>)}</ol> : <p className="muted-copy">ما في تحديثات مسجلة للحين.</p>}</Card>
-       <Card className="action-card"><h2 className="card-title">الخطوة الجاية</h2><p>كل خطوة تتأكد من حساب الطرف المعني، والدفع هنا تجريبي فقط.</p>{actionError && <ErrorMessage>{actionError}</ErrorMessage>}
+       <Card className="action-card"><h2 className="card-title">الخطوة الجاية</h2><p>كل خطوة تتأكد من حساب الطرف المعني.</p>{actionError && <ErrorMessage>{actionError}</ErrorMessage>}
        {(normalized === "awaiting_payment" || normalized === "payment_pending") && isBuyer && <Button disabled={busy} onClick={() => void beginPayment()}>{busy ? "جاري تجهيز الدفع…" : "ادفع الآن باستخدام Tap أو Stripe"}</Button>}
-       {normalized === "payment_pending" && !isBuyer && <span className="muted-copy">بانتظار المشتري يكمل الدفع التجريبي.</span>}
+       {normalized === "payment_pending" && !isBuyer && <span className="muted-copy">بانتظار المشتري يكمل الدفع.</span>}
        {normalized === "funded" && isSeller && deal.delivery_method === "delivery" && <div className="form-stack"><label>شركة التوصيل (اختياري)<input value={carrier} onChange={(event) => setCarrier(event.target.value)} maxLength={100} /></label><label>رقم التتبع (اختياري)<input value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} maxLength={120} /></label></div>}
        {actions.map(({ text, action, payload, variant }) => <Button key={action} disabled={busy || (action === "complete" && !paymentAuthorized)} variant={variant} onClick={() => action === "complete" ? void runCompletion() : void runAction(action, payload)}>{text}</Button>)}
        {!actions.length && !["awaiting_payment", "payment_pending"].includes(normalized) && <span className="muted-copy">ما عليك إجراء حالياً. آخر التحديثات تظهر هنا تلقائياً.</span>}
        {deal.delivery_method === "in_person" && normalized === "funded" && <Link className="button button-secondary live-link" href={`/deals/${id}/live`}>افتح شاشة التسليم الحضوري</Link>}
        {normalized === "inspection" && isBuyer && <div className="dispute-form"><label htmlFor="dispute-reason">إذا فيه مشكلة، اكتبها قبل فتح النزاع</label><textarea id="dispute-reason" rows={2} minLength={5} maxLength={1000} value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} placeholder="مثال: الغرض يختلف عن الوصف…" /><label htmlFor="dispute-photos">صور توضح المشكلة (اختياري، حتى 5)</label><input id="dispute-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setDisputePhotos(Array.from(event.target.files ?? []).slice(0, 5))} /><small className="muted-copy">{disputePhotos.length}/5 صور</small><Button variant="secondary" disabled={busy || disputeReason.trim().length < 5} onClick={() => void runDispute()}><ShieldAlert size={17} /> عندي مشكلة</Button></div>}
+       {normalized === "disputed" && <div className="judge-panel judge-review"><div className="judge-head"><span className="judge-badge">حَكَم عهدة</span><strong>النزاع قيد المراجعة</strong></div><p>المبلغ محفوظ في العهدة لين يصدر القرار. حَكَم عهدة يراجع الاتفاق والصور والمحادثة، وفريق عهدة يعتمد القرار ويبلغكم هني. أضيفوا أي توضيح في المحادثة.</p></div>}
        {normalized === "disputed" && isBuyer && <div className="dispute-form"><label htmlFor="more-dispute-photos">أضف صور أدلة للنزاع (اختياري، حتى 5 بالمجموع)</label><input id="more-dispute-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setDisputePhotos(Array.from(event.target.files ?? []).slice(0, Math.max(0, 5 - (deal.dispute_evidence_paths?.length ?? 0))))} /><small className="muted-copy">{deal.dispute_evidence_paths?.length ?? 0}/5 صور محفوظة</small><Button variant="secondary" disabled={busy || !disputePhotos.length || (deal.dispute_evidence_paths?.length ?? 0) >= 5} onClick={() => void uploadMoreEvidence()}>رفع الأدلة</Button></div>}
        {normalized === "inspection" && deal.inspection_deadline && <small className="inspection-countdown" role="timer" aria-live="polite">متبقي للفحص: {inspectionRemaining(deal.inspection_deadline, clockNow)}</small>}
        </Card>
@@ -360,9 +361,9 @@ export function LiveHandoverPage() {
     setError("");
     try {
       if (!deal.payment_provider || !deal.payment_reference || !["tap", "stripe"].includes(deal.payment_provider)) {
-        throw new Error("ما في حجز اختباري مؤكد مرتبط بالصفقة.");
+        throw new Error("ما في حجز مؤكد مرتبط بالصفقة.");
       }
-      const names = (people.find((person) => person.id === session.user.id)?.display_name || "Ohda Test").trim().split(/\s+/);
+      const names = (people.find((person) => person.id === session.user.id)?.display_name || "Ohda Customer").trim().split(/\s+/);
       await settleTestPayment({
         provider: deal.payment_provider as "tap" | "stripe",
         session,
@@ -377,7 +378,7 @@ export function LiveHandoverPage() {
       await applyDealAction(session, "live_complete", { deal_id: deal.id });
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر إتمام الصفقة التجريبية.");
+      setError(cause instanceof Error ? cause.message : "تعذر إتمام الصفقة.");
     } finally {
       finalizing.current = false;
       setBusy(false);
@@ -403,11 +404,11 @@ export function LiveHandoverPage() {
       if (deal.status.toLowerCase() === "awaiting_payment") await applyDealAction(session, "payment_pending", { deal_id: deal.id });
       await refresh();
       setPaymentOpen(true);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تجهيز الدفع التجريبي."); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تجهيز الدفع."); }
     finally { setBusy(false); }
   }
   async function refuse() {
-    if (!session || !deal || !window.confirm("هل تبي ترفض إتمام الصفقة؟ بنلغي حجز الاختبار ونلغي الصفقة.")) return;
+    if (!session || !deal || !window.confirm("هل تبي ترفض إتمام الصفقة؟ بنفك حجز المبلغ ونلغي الصفقة.")) return;
     setBusy(true);
     setError("");
     try {
@@ -441,20 +442,19 @@ export function LiveHandoverPage() {
   const inviteUrl = deal ? `${window.location.origin}/j/${deal.code}?live=1` : "";
   return <main className="live-full-screen"><header className="live-top"><Link href={`/deals/${id}`}>← تفاصيل الصفقة</Link><span className="live-brand">عهدة <span>●</span></span><span className="live-status"><i /> وضع التسليم الحضوري</span></header>
     <div className="live-content">
-      <div className="live-heading"><span className="live-icon"><Handshake size={26} /></span><p>تسليم حضوري مباشر</p><h1>{deal?.status.toLowerCase() === "completed" ? "تمت الصفقة بأمان" : "تأكدوا من الغرض سوا."}</h1><span className="live-subtitle">كل طرف يوافق من حسابه بعد ما يشوف الغرض. المبلغ محفوظ للاختبار فقط.</span></div>
+      <div className="live-heading"><span className="live-icon"><Handshake size={26} /></span><p>تسليم حضوري مباشر</p><h1>{deal?.status.toLowerCase() === "completed" ? "تمت الصفقة بأمان" : "تأكدوا من الغرض سوا."}</h1><span className="live-subtitle">كل طرف يوافق من حسابه بعد ما يشوف الغرض. المبلغ محفوظ في العهدة لين توافقون.</span></div>
       {error && <div className="live-error" role="alert">{error}<button type="button" onClick={() => setFinalizeRetry((value) => value + 1)}>أعد المحاولة</button></div>}
       {!session ? <Link className="button button-primary" href={`/login?next=${encodeURIComponent(`/deals/${id}/live`)}`}>سجّل دخولك للمتابعة</Link> : !deal ? <div className="skeleton-line" /> : !isParty ? (
         <Card className="live-content-card"><h2>هالصفقة مو مرتبطة بحسابك</h2><Link className="button button-secondary" href={`/deals/${id}`}>رجوع للتفاصيل</Link></Card>
       ) : <div className="live-card-grid">
         {(!deal.seller_id || !deal.buyer_id) && <Card className="live-content-card live-qr-card"><p>امسح الرمز للانضمام للطرف الثاني</p><div className="live-qr"><QRCodeSVG value={inviteUrl} size={190} level="M" includeMargin /></div><strong>رمز الصفقة <b dir="ltr">{deal.code}</b></strong><button type="button" className="live-copy" onClick={() => void copyInvite()}>{copied ? "اننسخ الرابط" : "انسخ رابط الدعوة"}</button></Card>}
         <Card className="live-content-card live-deal-card"><span className="live-item-label">تفاصيل الصفقة</span><h2>{deal.item_name}</h2><strong className="live-amount">{formatKwd(deal.amount)}</strong><div className="live-parties"><div><small>البائع</small><b>{people.find((person) => person.id === deal.seller_id)?.display_name || "بانتظار البائع"}</b><span className={deal.live_seller_approved ? "live-approval yes" : "live-approval"}>{deal.live_seller_approved ? "أوافق ✓" : "بانتظار موافقة البائع"}</span></div><div><small>المشتري</small><b>{people.find((person) => person.id === deal.buyer_id)?.display_name || "بانتظار المشتري"}</b><span className={deal.live_buyer_approved ? "live-approval yes" : "live-approval"}>{deal.live_buyer_approved ? "أوافق ✓" : "بانتظار موافقة المشتري"}</span></div></div>
-          <span className="live-test-pill">نسخة تجريبية — لا يوجد خصم حقيقي</span>
           {deal.status.toLowerCase() === "awaiting_acceptance" && deal.created_by !== session.user.id && <Button disabled={busy} onClick={() => void applyDealAction(session, "accept", { deal_id: deal.id }).then(refresh).catch((cause) => setError(cause instanceof Error ? cause.message : "تعذر قبول الشروط."))}>أوافق على الشروط</Button>}
           {["awaiting_payment", "payment_pending"].includes(deal.status.toLowerCase()) && isBuyer && <Button disabled={busy} onClick={() => void pay()}>{busy ? "جاري التجهيز…" : "ادفع الآن باستخدام Tap أو Stripe"}</Button>}
           {deal.status.toLowerCase() === "funded" && !bothApproved && <><Button disabled={busy || (isBuyer ? deal.live_buyer_approved : deal.live_seller_approved)} onClick={() => void approve()}>{busy ? "جاري حفظ موافقتك…" : isBuyer ? "أوافق ✓" : "أوافق ✓"}</Button><Button variant="secondary" disabled={busy} onClick={() => void refuse()}>ما أوافق ✕</Button><span className="live-waiting">{isBuyer ? deal.live_seller_approved ? "تم تأكيد البائع، ننتظر تأكيدك." : "بانتظار موافقة البائع…" : deal.live_buyer_approved ? "تم تأكيد المشتري، ننتظر تأكيدك." : "بانتظار موافقة المشتري…"}</span></>}
-          {bothApproved && deal.status.toLowerCase() === "funded" && <div className="success-band">تمت موافقة الطرفين. جاري إتمام الصفقة والتسوية التجريبية…</div>}
+          {bothApproved && deal.status.toLowerCase() === "funded" && <div className="success-band">تمت موافقة الطرفين. جاري إتمام الصفقة…</div>}
           {deal.status.toLowerCase() === "completed" && <div className="live-celebration" role="status">تمت الصفقة بأمان</div>}
-          {deal.status.toLowerCase() === "cancelled" && <div className="live-cancelled">تم إلغاء الصفقة التجريبية.</div>}
+          {deal.status.toLowerCase() === "cancelled" && <div className="live-cancelled">تم إلغاء الصفقة وفك حجز المبلغ.</div>}
         </Card>
       </div>}
       {session && deal && <DealPaymentSheet open={paymentOpen} onClose={() => setPaymentOpen(false)} deal={deal} session={session} profile={people.find((person) => person.id === session.user.id) ?? null} onLinked={async () => { setPaymentOpen(false); await refresh(); }} />}

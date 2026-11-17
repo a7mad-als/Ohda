@@ -38,7 +38,7 @@ async function paymentRequest<T>(
     ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });
   const payload = await response.json() as T & { error?: string };
-  if (!response.ok) throw new Error(payload.error || "تعذر التواصل مع بوابة الدفع التجريبية.");
+  if (!response.ok) throw new Error(payload.error || "تعذر التواصل مع بوابة الدفع.");
   return payload;
 }
 
@@ -125,7 +125,7 @@ export function DealPaymentSheet({
         provider: providerName,
         reference,
       });
-      setStatusText("تم تأكيد حجز الاختبار وربطه بالصفقة.");
+      setStatusText("تم حجز المبلغ في العهدة وربطه بالصفقة.");
       setError("");
       await onLinked();
     } catch (cause) {
@@ -196,7 +196,7 @@ export function DealPaymentSheet({
 
   async function startTap() {
     if (!tapConfig?.enabled) {
-      setError("Tap غير مهيأ بحساب اختبار، لذلك ما بدأنا أي حجز.");
+      setError("بوابة Tap غير متاحة حالياً، اختار Stripe.");
       return;
     }
     setBusy(true);
@@ -224,7 +224,7 @@ export function DealPaymentSheet({
       );
       window.location.assign(redirectUrl);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر بدء الدفع التجريبي عبر Tap.");
+      setError(cause instanceof Error ? cause.message : "تعذر بدء الدفع عبر Tap.");
     } finally {
       setBusy(false);
     }
@@ -232,7 +232,7 @@ export function DealPaymentSheet({
 
   async function startStripe() {
     if (!stripeQuote?.enabled || !stripeQuote.kwdToUsdRate) {
-      setError("Stripe أو سعر التحويل التجريبي غير متاح حالياً.");
+      setError("Stripe غير متاح حالياً، اختار Tap.");
       return;
     }
     setBusy(true);
@@ -259,7 +259,7 @@ export function DealPaymentSheet({
       );
       window.location.assign(redirectUrl);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر بدء الدفع التجريبي عبر Stripe.");
+      setError(cause instanceof Error ? cause.message : "تعذر بدء الدفع عبر Stripe.");
     } finally {
       setBusy(false);
     }
@@ -294,24 +294,22 @@ export function DealPaymentSheet({
       <section className="payment-sheet" role="dialog" aria-modal="true" aria-labelledby="deal-payment-title">
         <button className="payment-sheet-close" type="button" aria-label="إغلاق" onClick={onClose} disabled={busy}><X size={19} /></button>
         <span className="payment-sheet-mark"><CreditCard size={21} /></span>
-        <span className="demo-ribbon compact">نسخة تجريبية — الدفع تجريبي بدون خصم حقيقي</span>
         <h2 id="deal-payment-title">اختار بوابة الدفع</h2>
         <p className="payment-sheet-item">{deal.item_name} <strong>{formatKwd(deal.amount)}</strong></p>
         <div className="payment-provider-choice">
-          <button type="button" aria-pressed={provider === "tap"} className={provider === "tap" ? "chosen" : ""} onClick={() => { setProvider("tap"); setError(""); }}>Tap <small>KWD · اختبار</small></button>
-          <button type="button" aria-pressed={provider === "stripe"} className={provider === "stripe" ? "chosen" : ""} disabled={!canUseStripe} onClick={() => { setProvider("stripe"); setError(""); }}>Stripe <small>{canUseStripe ? "USD · اختبار" : "غير مهيأ"}</small></button>
+          <button type="button" aria-pressed={provider === "tap"} className={provider === "tap" ? "chosen" : ""} onClick={() => { setProvider("tap"); setError(""); }}>Tap <small>كي نت · بطاقات · د.ك</small></button>
+          <button type="button" aria-pressed={provider === "stripe"} className={provider === "stripe" ? "chosen" : ""} disabled={!canUseStripe} onClick={() => { setProvider("stripe"); setError(""); }}>Stripe <small>{canUseStripe ? "بطاقات دولية" : "غير متاح"}</small></button>
         </div>
-        {loadingConfig ? <p className="muted-copy">جاري فحص إعدادات الاختبار…</p> : provider === "stripe" ? (
+        {loadingConfig ? <p className="muted-copy">جاري تجهيز وسائل الدفع…</p> : provider === "stripe" ? (
           <div className="payment-provider-content">
-            {canUseStripe ? <><p>الدفع عبر Stripe يكون بالدولار حسب سعر التحويل الحالي للاختبار: <b dir="ltr">{stripeUsdAmount?.toFixed(2)} USD</b>.</p><small>السعر التقريبي: ١ د.ك = {stripeQuote?.kwdToUsdRate?.toFixed(4)} USD.</small><div className="tap-test-card-hint"><b>بطاقة Stripe الاختبارية</b><span dir="ltr">4242 4242 4242 4242 · 12/34 · CVC 123</span></div></> : <p role="alert">Stripe أو سعر التحويل التجريبي غير متاح. استخدم Tap أو حاول لاحقاً.</p>}
+            {canUseStripe ? <><p>الدفع عبر Stripe يكون بالدولار حسب سعر التحويل الحالي: <b dir="ltr">{stripeUsdAmount?.toFixed(2)} USD</b>.</p><small>السعر التقريبي: ١ د.ك = {stripeQuote?.kwdToUsdRate?.toFixed(4)} USD.</small><details className="card-hint-details"><summary>بيانات بطاقة العرض</summary><div className="tap-test-card-hint"><b>بطاقة</b><span dir="ltr">4242 4242 4242 4242 · 12/34 · CVC 123</span></div></details></> : <p role="alert">Stripe غير متاح حالياً. استخدم Tap أو حاول لاحقاً.</p>}
           </div>
         ) : (
           <div className="payment-provider-content">
-            {deal.amount > 2000 ? <p role="alert">مبلغ الصفقة أعلى من حد Tap للاختبار. اختار Stripe أو خفّض المبلغ.</p> : canUseTap ? <>
-              <p>صفحة Tap الآمنة تعرض وسائل الدفع المتاحة للاختبار، مثل KNET والبطاقات، وApple Pay إذا كان مفعّلاً في حساب الاختبار.</p>
-              <div className="tap-test-card-hint"><b>اختبار KNET</b><span dir="ltr">8888880000000001 · 09/30 · PIN 1234</span></div>
-              <div className="tap-test-card-hint"><b>بطاقة Tap الاختبارية</b><span dir="ltr">5123 4500 0000 0008 · 01/39 · CVC 100</span></div>
-            </> : <p role="alert">مفتاح Tap الاختباري غير متاح، لذلك ما بدأنا أي حجز.</p>}
+            {deal.amount > 2000 ? <p role="alert">مبلغ الصفقة أعلى من حد Tap. اختار Stripe.</p> : canUseTap ? <>
+              <p>صفحة Tap الآمنة تعرض وسائل الدفع المتاحة مثل كي نت والبطاقات وأبل باي.</p>
+              <details className="card-hint-details"><summary>بيانات بطاقة العرض</summary><div className="tap-test-card-hint"><b>كي نت</b><span dir="ltr">8888880000000001 · 09/30 · PIN 1234</span></div><div className="tap-test-card-hint"><b>بطاقة</b><span dir="ltr">5123 4500 0000 0008 · 01/39 · CVC 100</span></div></details>
+            </> : <p role="alert">بوابة Tap غير متاحة حالياً. اختار Stripe أو حاول لاحقاً.</p>}
           </div>
         )}
         {statusText && <p role="status" className="success-message"><Check size={17} /> {statusText}</p>}
@@ -319,12 +317,12 @@ export function DealPaymentSheet({
         {provider === "tap" && canUseTap && <div className="payment-profile-hint">الاسم: {nameText} · {session.user.email}</div>}
         <form onSubmit={submit} className="payment-sheet-form">
           {!statusText && <button className="button button-primary" disabled={loadingConfig || busy || (provider === "tap" && !canUseTap) || (provider === "stripe" && !canUseStripe)} type="submit">
-            {busy ? "جاري تجهيز الدفع التجريبي…" : provider === "stripe" ? "المتابعة إلى Stripe" : "المتابعة إلى Tap"}
+            {busy ? "جاري تجهيز الدفع…" : provider === "stripe" ? "المتابعة إلى Stripe" : "المتابعة إلى Tap"}
             <ArrowLeft size={17} />
           </button>}
           {statusText && <button className="button button-primary" type="button" onClick={onClose}>إغلاق <ArrowLeft size={17} /></button>}
         </form>
-        <p className="payment-sheet-footnote">هذه عملية اختبار فقط. لا توجد أموال حقيقية أو تحويل للبائع.</p>
+        <p className="payment-sheet-footnote">المبلغ يُحجز في العهدة ولا يُصرف للبائع إلا بعد تأكيدك أو انتهاء مدة الفحص.</p>
       </section>
     </div>
   );

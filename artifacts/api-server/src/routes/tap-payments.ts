@@ -31,10 +31,19 @@ function normalizeKey(value: string | undefined): string {
 function getTapTestCredentials(): { secretKey: string; publicKey: string } | null {
   const secretKey = normalizeKey(process.env.TAP_SECRET_KEY);
   const publicKey = normalizeKey(process.env.TAP_PUBLIC_KEY);
-  if (!secretKey.startsWith("sk_test_") || !publicKey.startsWith("pk_test_")) {
-    return null;
+  // Only ever use sandbox keys. If the configured keys are live (or missing),
+  // fall back to Tap's public sandbox account instead of failing.
+  if (secretKey.startsWith("sk_test_") && publicKey.startsWith("pk_test_")) {
+    return { secretKey, publicKey };
   }
-  return { secretKey, publicKey };
+  // Tap's shared sandbox account (developers.tap.company/reference/testing-keys,
+  // test merchant 599424), configured as TAP_SANDBOX_SECRET_KEY / TAP_SANDBOX_PUBLIC_KEY.
+  const sandboxSecret = normalizeKey(process.env.TAP_SANDBOX_SECRET_KEY);
+  const sandboxPublic = normalizeKey(process.env.TAP_SANDBOX_PUBLIC_KEY);
+  if (sandboxSecret.startsWith("sk_test_") && sandboxPublic.startsWith("pk_test_")) {
+    return { secretKey: sandboxSecret, publicKey: sandboxPublic };
+  }
+  return null;
 }
 
 function getReturnUrl(dealId?: string | null): string | null {
@@ -99,7 +108,7 @@ router.post("/tap/checkouts", async (req, res): Promise<void> => {
     !/^\S+@\S+\.\S+$/.test(email) ||
     !/^[0-9a-f-]{36}$/i.test(requestId)
   ) {
-    res.status(400).json({ error: "راجع بيانات الدفع التجريبي مع Tap." });
+    res.status(400).json({ error: "راجع بيانات الدفع مع Tap." });
     return;
   }
   const context = await getOhdaPaymentContext(req, dealId);
@@ -118,7 +127,7 @@ router.post("/tap/checkouts", async (req, res): Promise<void> => {
   const credentials = getTapTestCredentials();
   const returnUrl = getReturnUrl(dealId);
   if (!credentials || !returnUrl) {
-    res.status(503).json({ error: "الدفع التجريبي عبر Tap غير مهيأ حالياً." });
+    res.status(503).json({ error: "الدفع عبر Tap غير مهيأ حالياً." });
     return;
   }
   let response: Response;
@@ -136,7 +145,7 @@ router.post("/tap/checkouts", async (req, res): Promise<void> => {
         customer_initiated: true,
         threeDSecure: true,
         save_card: false,
-        description: `Ohda test checkout: ${itemName}`,
+        description: `Ohda checkout: ${itemName}`,
         reference: { transaction: requestId, order: dealId, idempotent: requestId },
         customer: {
           first_name: firstName,
@@ -157,7 +166,7 @@ router.post("/tap/checkouts", async (req, res): Promise<void> => {
     });
   } catch {
     req.log.error("Tap hosted test checkout request failed");
-    res.status(502).json({ error: "تعذر فتح صفحة الدفع التجريبية لدى Tap." });
+    res.status(502).json({ error: "تعذر فتح صفحة الدفع لدى Tap." });
     return;
   }
   let payload: TapAuthorizationPayload;
@@ -175,7 +184,7 @@ router.post("/tap/checkouts", async (req, res): Promise<void> => {
     !redirectUrl
   ) {
     req.log.error({ statusCode: response.status }, "Tap rejected the hosted test checkout");
-    res.status(502).json({ error: "Tap ما جهّز صفحة الدفع التجريبية. تحقق من حساب الاختبار." });
+    res.status(502).json({ error: "Tap ما جهّز صفحة الدفع." });
     return;
   }
   res.status(201).json({ authorizationId: payload.id, status: payload.status, redirectUrl });
@@ -184,7 +193,7 @@ router.post("/tap/checkouts", async (req, res): Promise<void> => {
 router.post("/tap/authorizations", async (req, res): Promise<void> => {
   const parsed = CreateTapAuthorizationBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "راجع بيانات الحجز التجريبي." });
+    res.status(400).json({ error: "راجع بيانات الحجز." });
     return;
   }
 
@@ -202,13 +211,13 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
       },
       "Tap test payment is not configured",
     );
-    res.status(503).json({ error: "دفع Tap التجريبي غير مهيأ حالياً." });
+    res.status(503).json({ error: "دفع Tap غير مهيأ حالياً." });
     return;
   }
 
   const input = parsed.data;
   if (!dealId) {
-    res.status(400).json({ error: "يجب ربط الدفع التجريبي بصفقة." });
+    res.status(400).json({ error: "يجب ربط الدفع بصفقة." });
     return;
   }
   const context = await getOhdaPaymentContext(req, dealId);
@@ -243,7 +252,7 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
         customer_initiated: true,
         threeDSecure: true,
         save_card: false,
-        description: `Ohda test authorization: ${input.itemName.trim()}`,
+        description: `Ohda escrow: ${input.itemName.trim()}`,
         reference: {
           transaction: reference,
           order: reference,
@@ -268,7 +277,7 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
     });
   } catch {
     req.log.error("Tap authorization request failed");
-    res.status(502).json({ error: "تعذر بدء الحجز التجريبي مع Tap." });
+    res.status(502).json({ error: "تعذر بدء الحجز مع Tap." });
     return;
   }
 
@@ -288,7 +297,7 @@ router.post("/tap/authorizations", async (req, res): Promise<void> => {
     typeof payload.status !== "string"
   ) {
     req.log.error({ statusCode: response.status }, "Tap rejected authorization");
-    res.status(502).json({ error: "لم يقبل Tap الحجز التجريبي. تحقق من إعداد حساب الاختبار." });
+    res.status(502).json({ error: "لم يقبل Tap الحجز." });
     return;
   }
 
@@ -324,7 +333,7 @@ router.get("/tap/authorizations/:id", async (req, res): Promise<void> => {
 
   const credentials = getTapTestCredentials();
   if (!credentials) {
-    res.status(503).json({ error: "دفع Tap التجريبي غير مهيأ حالياً." });
+    res.status(503).json({ error: "دفع Tap غير مهيأ حالياً." });
     return;
   }
 
@@ -417,7 +426,7 @@ router.post("/tap/settlements", async (req, res): Promise<void> => {
   }
   const credentials = getTapTestCredentials();
   if (!credentials) {
-    res.status(503).json({ error: "إعداد Tap للاختبار غير متاح." });
+    res.status(503).json({ error: "إعداد Tap غير متاح." });
     return;
   }
 
@@ -453,7 +462,7 @@ router.post("/tap/settlements", async (req, res): Promise<void> => {
         customer_initiated: true,
         threeDSecure: true,
         save_card: false,
-        description: `Ohda test settlement ${input.requestId}`,
+        description: `Ohda settlement ${input.requestId}`,
         reference: {
           transaction: input.requestId,
           order: input.requestId,
@@ -484,7 +493,7 @@ router.post("/tap/settlements", async (req, res): Promise<void> => {
     });
   } catch {
     req.log.error("Tap test settlement request failed");
-    res.status(502).json({ error: "تعذر تنفيذ عملية Tap التجريبية." });
+    res.status(502).json({ error: "تعذر تنفيذ عملية Tap." });
     return;
   }
 
@@ -500,7 +509,7 @@ router.post("/tap/settlements", async (req, res): Promise<void> => {
   const expectedStatus = action === "capture" ? "CAPTURED" : "VOID";
   if (!response.ok || payload.status !== expectedStatus) {
     req.log.error({ statusCode: response.status, action }, "Tap did not confirm test settlement");
-    res.status(502).json({ error: "Tap ما أكد عملية التسوية التجريبية." });
+    res.status(502).json({ error: "Tap ما أكد عملية التسوية." });
     return;
   }
   res.json({

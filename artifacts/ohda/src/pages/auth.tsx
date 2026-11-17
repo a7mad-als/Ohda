@@ -91,7 +91,7 @@ export function LoginPage() {
      <FormMessage error={error} success={success} /><SubmitButton busy={busy}>دخول إلى حسابي</SubmitButton>
      {canResend && <button className="button button-secondary" type="button" onClick={() => void resendConfirmation()} disabled={resending || busy}>{resending ? "جاري إرسال الرابط…" : "إعادة إرسال رابط التأكيد"}</button>}
      </form>}
-     {!hasCallbackSession || !busy ? <p className="auth-switch">ما عندك حساب؟ <Link href={`/signup${window.location.search}`}>سوّ حساب جديد</Link></p> : null}<p className="quiet-note">نسخة اختبارية — التسجيل ما يخصم أي مبلغ.</p></Card></div></Shell>;
+     {!hasCallbackSession || !busy ? <p className="auth-switch">ما عندك حساب؟ <Link href={`/signup${window.location.search}`}>سوّ حساب جديد</Link></p> : null}<p className="quiet-note">التسجيل مجاني وما يخصم أي مبلغ.</p></Card></div></Shell>;
 }
 
 export function SignupPage() {

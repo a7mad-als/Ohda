@@ -133,7 +133,7 @@ router.get("/stripe/config", async (_req, res): Promise<void> => {
 router.post("/stripe/authorizations", async (req, res): Promise<void> => {
   const parsed = CreateStripeAuthorizationBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "راجع بيانات الحجز التجريبي." });
+    res.status(400).json({ error: "راجع بيانات الحجز." });
     return;
   }
   const input = parsed.data;
@@ -142,7 +142,7 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
     ? req.body.dealId
     : null;
   if (!dealId) {
-    res.status(400).json({ error: "يجب ربط الدفع التجريبي بصفقة." });
+    res.status(400).json({ error: "يجب ربط الدفع بصفقة." });
     return;
   }
   const context = await getOhdaPaymentContext(req, dealId);
@@ -171,13 +171,13 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
       },
       "Stripe test payment is not configured",
     );
-    res.status(503).json({ error: "دفع Stripe التجريبي غير مهيأ حالياً." });
+    res.status(503).json({ error: "دفع Stripe غير مهيأ حالياً." });
     return;
   }
 
   const amountUsd = Math.round(input.amount * quote.rate * 100) / 100;
   if (amountUsd < 0.5 || amountUsd > 999999.99) {
-    res.status(400).json({ error: "قيمة الصفقة خارج نطاق الدفع التجريبي عبر Stripe." });
+    res.status(400).json({ error: "قيمة الصفقة خارج النطاق المسموح عبر Stripe." });
     return;
   }
   const returnPath = `/deals/${dealId}?stripeReturn=1&session_id={CHECKOUT_SESSION_ID}`;
@@ -221,7 +221,7 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
     });
   } catch {
     req.log.error("Stripe checkout session request failed");
-    res.status(502).json({ error: "تعذر بدء الحجز التجريبي مع Stripe." });
+    res.status(502).json({ error: "تعذر بدء الحجز مع Stripe." });
     return;
   }
 
@@ -244,7 +244,7 @@ router.post("/stripe/authorizations", async (req, res): Promise<void> => {
       },
       "Stripe rejected test authorization checkout",
     );
-    res.status(502).json({ error: "لم يقبل Stripe الحجز التجريبي. تحقق من إعداد حساب الاختبار." });
+    res.status(502).json({ error: "لم يقبل Stripe الحجز." });
     return;
   }
 
@@ -296,7 +296,7 @@ router.get(
 
     const secretKey = getStripeTestSecret();
     if (!secretKey) {
-      res.status(503).json({ error: "دفع Stripe التجريبي غير مهيأ حالياً." });
+      res.status(503).json({ error: "دفع Stripe غير مهيأ حالياً." });
       return;
     }
 
@@ -426,7 +426,7 @@ router.post("/stripe/settlements", async (req, res): Promise<void> => {
   }
   const secretKey = getStripeTestSecret();
   if (!secretKey) {
-    res.status(503).json({ error: "إعداد Stripe للاختبار غير متاح." });
+    res.status(503).json({ error: "إعداد Stripe غير متاح." });
     return;
   }
   const endpoint = action === "capture" ? "capture" : "cancel";
@@ -442,14 +442,14 @@ router.post("/stripe/settlements", async (req, res): Promise<void> => {
     );
   } catch {
     req.log.error("Stripe test settlement request failed");
-    res.status(502).json({ error: "تعذر تنفيذ عملية Stripe التجريبية." });
+    res.status(502).json({ error: "تعذر تنفيذ عملية Stripe." });
     return;
   }
   const payload = await readStripeJson(response) as StripePaymentIntent | null;
   const expectedStatus = action === "capture" ? "succeeded" : "canceled";
   if (!response.ok || payload?.id !== paymentIntentId || payload?.status !== expectedStatus) {
     req.log.error({ statusCode: response.status, action }, "Stripe did not confirm test settlement");
-    res.status(502).json({ error: "Stripe ما أكد عملية التسوية التجريبية." });
+    res.status(502).json({ error: "Stripe ما أكد عملية التسوية." });
     return;
   }
   res.json({ action, status: expectedStatus, reference: paymentIntentId });

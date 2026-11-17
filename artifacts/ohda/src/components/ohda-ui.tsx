@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { LockKeyhole, House, FileText, Plus, CircleUserRound, ArrowLeft, LoaderCircle } from "lucide-react";
+import { LockKeyhole, House, FileText, Plus, CircleUserRound, ArrowLeft, LoaderCircle, Download } from "lucide-react";
 import { addWaitlistInterest, getProfile, getSession, signOut, type OhdaProfile, type OhdaSession } from "@/lib/ohda-data";
 
 export function useOhdaSession() {
@@ -29,6 +29,30 @@ export function useOhdaSession() {
   return { session, profile, loading, refresh };
 }
 
+type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+
+export function InstallAppButton() {
+  const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
+  const [iosHint, setIosHint] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (standalone) { setInstalled(true); return; }
+    const onPrompt = (event: Event) => { event.preventDefault(); setPromptEvent(event as InstallPromptEvent); };
+    const onInstalled = () => { setInstalled(true); setPromptEvent(null); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("appinstalled", onInstalled); };
+  }, []);
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (installed || (!promptEvent && !isIos)) return null;
+  async function install() {
+    if (promptEvent) { await promptEvent.prompt(); await promptEvent.userChoice; setPromptEvent(null); return; }
+    setIosHint((value) => !value);
+  }
+  return <span className="install-wrap"><button type="button" className="install-button" onClick={() => void install()}><Download size={16} /> ثبّت التطبيق</button>{iosHint && <span role="status" className="install-hint">من سفاري اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»</span>}</span>;
+}
+
 export function Brand() {
   return <Link href="/" className="brand" aria-label="عهدة، الرئيسية"><span className="brand-lock"><LockKeyhole size={18} /></span><span className="brand-word">عهدة</span></Link>;
 }
@@ -55,10 +79,10 @@ export function Shell({ children }: { children: ReactNode }) {
   return <div className="app-shell" dir="rtl">
     <header className="topbar"><div className="topbar-inner"><Brand /><nav aria-label="التنقل الرئيسي" className="desktop-nav">
       {links.map(({ href, label }) => <Link href={href} key={href}>{label}</Link>)}
-    </nav><div className="top-actions">{session ? <><span className="hello-user">{profile?.display_name || session.user.email}</span><button className="text-button" onClick={() => void logout()}>تسجيل خروج</button></> : <><Link className="text-button" href="/login">دخول</Link><Link className="button button-small" href="/signup">حساب جديد</Link></>}</div></div></header>
+    </nav><div className="top-actions"><InstallAppButton />{session ? <><span className="hello-user">{profile?.display_name || session.user.email}</span><button className="text-button" onClick={() => void logout()}>تسجيل خروج</button></> : <><Link className="text-button" href="/login">دخول</Link><Link className="button button-small" href="/signup">حساب جديد</Link></>}</div></div></header>
     {logoutError && <div role="alert" className="inline-error top-error">{logoutError}</div>}
     <main className="main-content">{children}</main>
-    <footer className="site-footer"><Brand /><span>صفقات أوضح للمستعمل في الكويت.</span><small>نموذج تجريبي — لا توجد مدفوعات حقيقية</small></footer>
+    <footer className="site-footer"><Brand /><span>صفقات أوضح للمستعمل في الكويت.</span><small>© ٢٠٢٦ عهدة · جميع الحقوق محفوظة</small></footer>
     <nav aria-label="التنقل السفلي" className="mobile-nav">{links.map(({ href, label, icon: Icon }) => <Link href={href} key={href}><Icon size={19} /><span>{label}</span></Link>)}</nav>
   </div>;
 }
