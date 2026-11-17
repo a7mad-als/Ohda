@@ -7,6 +7,7 @@ import {
   GetTapPaymentConfigResponse,
 } from "@workspace/api-zod";
 import { getOhdaPaymentContext } from "./ohda-payment-auth";
+import { getAppOrigin } from "../lib/app-origin";
 
 const router: IRouter = Router();
 const TAP_API = "https://api.tap.company/v2";
@@ -47,21 +48,11 @@ function getTapTestCredentials(): { secretKey: string; publicKey: string } | nul
 }
 
 function getReturnUrl(dealId?: string | null): string | null {
-  const configuredDomain =
-    process.env.NODE_ENV === "production"
-      ? process.env.REPLIT_DOMAINS?.split(",")[0]?.trim() ||
-        process.env.REPLIT_DEV_DOMAIN?.trim()
-      : process.env.REPLIT_DEV_DOMAIN?.trim() ||
-        process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
-  if (!configuredDomain) return null;
-  try {
-    const url = new URL(`https://${configuredDomain}`);
-    return dealId && DEAL_ID_PATTERN.test(dealId)
-      ? `${url.origin}/deals/${dealId}?tapReturn=1`
-      : `${url.origin}/?tapReturn=1`;
-  } catch {
-    return null;
-  }
+  const origin = getAppOrigin();
+  if (!origin) return null;
+  return dealId && DEAL_ID_PATTERN.test(dealId)
+    ? `${origin}/deals/${dealId}?tapReturn=1`
+    : `${origin}/?tapReturn=1`;
 }
 
 function getSafeTapRedirect(value: unknown): string | null {

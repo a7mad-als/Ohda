@@ -6,6 +6,7 @@ import {
   GetStripeAuthorizationResponse,
 } from "@workspace/api-zod";
 import { getOhdaPaymentContext } from "./ohda-payment-auth";
+import { getAppOrigin } from "../lib/app-origin";
 
 const router: IRouter = Router();
 const STRIPE_API = "https://api.stripe.com/v1";
@@ -77,21 +78,6 @@ function normalizeKey(value: string | undefined): string {
 function getStripeTestSecret(): string | null {
   const secretKey = normalizeKey(process.env.STRIPE_SECRET_KEY);
   return secretKey.startsWith("sk_test_") ? secretKey : null;
-}
-
-function getAppOrigin(): string | null {
-  const configuredDomain =
-    process.env.NODE_ENV === "production"
-      ? process.env.REPLIT_DOMAINS?.split(",")[0]?.trim() ||
-        process.env.REPLIT_DEV_DOMAIN?.trim()
-      : process.env.REPLIT_DEV_DOMAIN?.trim() ||
-        process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
-  if (!configuredDomain) return null;
-  try {
-    return new URL(`https://${configuredDomain}`).origin;
-  } catch {
-    return null;
-  }
 }
 
 function getSafeCheckoutUrl(value: unknown): string | null {
