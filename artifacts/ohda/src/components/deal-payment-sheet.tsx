@@ -302,13 +302,13 @@ export function DealPaymentSheet({
         </div>
         {loadingConfig ? <p className="muted-copy">جاري تجهيز وسائل الدفع…</p> : provider === "stripe" ? (
           <div className="payment-provider-content">
-            {canUseStripe ? <><p>الدفع عبر Stripe يكون بالدولار حسب سعر التحويل الحالي: <b dir="ltr">{stripeUsdAmount?.toFixed(2)} USD</b>.</p><small>السعر التقريبي: ١ د.ك = {stripeQuote?.kwdToUsdRate?.toFixed(4)} USD.</small><details className="card-hint-details"><summary>بيانات بطاقة العرض</summary><div className="tap-test-card-hint"><b>بطاقة</b><span dir="ltr">4242 4242 4242 4242 · 12/34 · CVC 123</span></div></details></> : <p role="alert">Stripe غير متاح حالياً. استخدم Tap أو حاول لاحقاً.</p>}
+            {canUseStripe ? <><p>الدفع عبر Stripe يكون بالدولار حسب سعر التحويل الحالي: <b dir="ltr">{stripeUsdAmount?.toFixed(2)} USD</b>.</p><small>السعر التقريبي: ١ د.ك = {stripeQuote?.kwdToUsdRate?.toFixed(4)} USD.</small><details className="card-hint-details" open><summary>بيانات الدفع للعرض</summary><div className="tap-test-card-hint"><b>اختار «Card» في صفحة Stripe:</b><span dir="ltr">4242 4242 4242 4242 · 12/34 · CVC 123</span></div></details></> : <p role="alert">Stripe غير متاح حالياً. استخدم Tap أو حاول لاحقاً.</p>}
           </div>
         ) : (
           <div className="payment-provider-content">
             {deal.amount > 2000 ? <p role="alert">مبلغ الصفقة أعلى من حد Tap. اختار Stripe.</p> : canUseTap ? <>
               <p>صفحة Tap الآمنة تعرض وسائل الدفع المتاحة مثل كي نت والبطاقات وأبل باي.</p>
-              <details className="card-hint-details"><summary>بيانات بطاقة العرض</summary><div className="tap-test-card-hint"><b>اختار «بطاقة» في صفحة Tap واستخدم:</b><span dir="ltr">5123 4500 0000 0008 · 01/39 · CVC 100</span></div></details>
+              <details className="card-hint-details" open><summary>بيانات الدفع للعرض</summary><div className="tap-test-card-hint"><b>إذا اخترت «كي نت» في صفحة Tap:</b><span dir="ltr">8888 8800 0000 0002 · 09/30 · PIN 1234</span></div><div className="tap-test-card-hint"><b>إذا اخترت «بطاقة» (فيزا):</b><span dir="ltr">4508 7500 1574 1019 · 01/39 · CVV 100</span></div></details>
             </> : <p role="alert">بوابة Tap غير متاحة حالياً. اختار Stripe أو حاول لاحقاً.</p>}
           </div>
         )}

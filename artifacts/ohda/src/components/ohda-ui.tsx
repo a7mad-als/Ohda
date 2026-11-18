@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { LockKeyhole, House, FileText, Plus, CircleUserRound, ArrowLeft, LoaderCircle, Download, KeyRound } from "lucide-react";
+import { LockKeyhole, House, FileText, Plus, CircleUserRound, ArrowLeft, LoaderCircle, Download, KeyRound, ScanLine } from "lucide-react";
+import { QrScanner } from "@/components/qr-scanner";
 import { addWaitlistInterest, getProfile, getSession, signOut, type OhdaProfile, type OhdaSession } from "@/lib/ohda-data";
 
 export function useOhdaSession() {
@@ -168,6 +169,7 @@ export function JoinByCode({ compact = false }: { compact?: boolean }) {
   const [, navigate] = useLocation();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -175,8 +177,10 @@ export function JoinByCode({ compact = false }: { compact?: boolean }) {
     navigate(`/j/${clean}`);
   }
   return <form className={compact ? "join-code compact" : "join-code"} onSubmit={submit}>
-    <div className="join-code-head"><span className="join-code-icon"><KeyRound size={18} /></span><div><strong>عندك كود صفقة؟</strong><small>اكتب الكود اللي أرسله لك الطرف الثاني وانضم للصفقة</small></div></div>
+    <div className="join-code-head"><span className="join-code-icon"><KeyRound size={18} /></span><div><strong>عندك كود صفقة؟</strong><small>اكتب الكود أو امسح الباركود اللي أرسله لك الطرف الثاني</small></div></div>
     <div className="join-code-row"><input aria-label="كود الصفقة" dir="ltr" maxLength={8} placeholder="8DF33C" value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setError(""); }} /><button className="button button-primary" type="submit">انضم <ArrowLeft size={16} /></button></div>
+    <button type="button" className="join-scan-button" onClick={() => setScanning(true)}><ScanLine size={17} /> امسح الباركود بالكاميرا</button>
     {error && <small role="alert" className="join-code-error">{error}</small>}
+    {scanning && <QrScanner onClose={() => setScanning(false)} onCode={(found) => { setScanning(false); navigate(`/j/${found}`); }} />}
   </form>;
 }
