@@ -302,7 +302,9 @@ export function DealDetailPage() {
       {paymentAuthorized && <div className="held-seal" role="status"><span className="seal-icon"><LockKeyholeIcon /></span><div><strong>المبلغ محفوظ في العهدة</strong><small>ما ينصرف للبائع إلا بعد تأكيد المشتري أو انتهاء مدة الفحص.</small></div><span className="test-label">محفوظ</span></div>}
        {!paymentAuthorized && <div className="test-notice"><strong>المبلغ غير محجوز للحين.</strong> {normalized === "awaiting_payment" || normalized === "payment_pending" ? "اختر Tap أو Stripe لحجز المبلغ في العهدة." : "يتحجز المبلغ بعد موافقة الطرفين ودفع المشتري."}</div>}
       <Card className="participants-card"><h2 className="card-title">أطراف الصفقة</h2><div className="people-row"><Person label="البائع" name={deal.seller_id === session.user.id ? "أنت" : people.find(p => p.id === deal.seller_id)?.display_name || (deal.seller_id ? "عضو عهدة" : "بانتظار الانضمام")} /><Person label="المشتري" name={deal.buyer_id === session.user.id ? "أنت" : people.find(p => p.id === deal.buyer_id)?.display_name || (deal.buyer_id ? "عضو عهدة" : "بانتظار الانضمام")} /></div>{["created", "awaiting_acceptance"].includes(normalized) && <div className="invite-share"><div><strong>شارك الدعوة</strong><small>الطرف الثاني يقدر يراجع تفاصيل الاتفاق.</small></div><button className="icon-button" aria-label="نسخ رابط الدعوة" onClick={() => void copyInvite()}><Copy size={17} />{copied ? "اننسخ" : "نسخ الرابط"}</button></div>}</Card>
-      <Card className="timeline-card"><h2 className="card-title">مسار الصفقة</h2>{events.length ? <ol className="timeline">{events.map((event, i) => <li key={event.id}><span className={i === events.length - 1 ? "timeline-dot current" : "timeline-dot"} /><div><strong>{eventTitle(event)}</strong><small>{new Date(event.created_at).toLocaleString("ar-KW", { dateStyle: "medium", timeStyle: "short" })}</small></div></li>)}</ol> : <p className="muted-copy">ما في تحديثات مسجلة للحين.</p>}</Card>
+      <DealProgress deal={deal} />
+      <MoneyCard deal={deal} isSeller={isSeller} iban={people.find((person) => person.id === session.user.id)?.iban ?? null} />
+      <Card className="timeline-card"><h2 className="card-title">سجل التحديثات</h2>{events.length ? <ol className="timeline">{events.map((event, i) => <li key={event.id}><span className={i === events.length - 1 ? "timeline-dot current" : "timeline-dot"} /><div><strong>{eventTitle(event)}</strong><small>{new Date(event.created_at).toLocaleString("ar-KW", { dateStyle: "medium", timeStyle: "short" })}</small></div></li>)}</ol> : <p className="muted-copy">ما في تحديثات مسجلة للحين.</p>}</Card>
        <Card className="action-card"><h2 className="card-title">الخطوة الجاية</h2><p>كل خطوة تتأكد من حساب الطرف المعني.</p>{actionError && <ErrorMessage>{actionError}</ErrorMessage>}
        {(normalized === "awaiting_payment" || normalized === "payment_pending") && isBuyer && <Button disabled={busy} onClick={() => void beginPayment()}>{busy ? "جاري تجهيز الدفع…" : "ادفع الآن باستخدام Tap أو Stripe"}</Button>}
        {normalized === "payment_pending" && !isBuyer && <span className="muted-copy">بانتظار المشتري يكمل الدفع.</span>}
@@ -311,7 +313,7 @@ export function DealDetailPage() {
        {!actions.length && !["awaiting_payment", "payment_pending"].includes(normalized) && <span className="muted-copy">ما عليك إجراء حالياً. آخر التحديثات تظهر هنا تلقائياً.</span>}
        {deal.delivery_method === "in_person" && normalized === "funded" && <Link className="button button-secondary live-link" href={`/deals/${id}/live`}>افتح شاشة التسليم الحضوري</Link>}
        {normalized === "inspection" && isBuyer && <div className="dispute-form"><label htmlFor="dispute-reason">إذا فيه مشكلة، اكتبها قبل فتح النزاع</label><textarea id="dispute-reason" rows={2} minLength={5} maxLength={1000} value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} placeholder="مثال: الغرض يختلف عن الوصف…" /><label htmlFor="dispute-photos">صور توضح المشكلة (اختياري، حتى 5)</label><input id="dispute-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setDisputePhotos(Array.from(event.target.files ?? []).slice(0, 5))} /><small className="muted-copy">{disputePhotos.length}/5 صور</small><Button variant="secondary" disabled={busy || disputeReason.trim().length < 5} onClick={() => void runDispute()}><ShieldAlert size={17} /> عندي مشكلة</Button></div>}
-       {normalized === "disputed" && <div className="judge-panel judge-review"><div className="judge-head"><span className="judge-badge">حَكَم عهدة</span><strong>النزاع قيد المراجعة</strong></div><p>المبلغ محفوظ في العهدة لين يصدر القرار. حَكَم عهدة يراجع الاتفاق والصور والمحادثة، وفريق عهدة يعتمد القرار ويبلغكم هني. أضيفوا أي توضيح في المحادثة.</p></div>}
+       {normalized === "disputed" && <div className="judge-panel judge-review"><div className="judge-head"><span className="judge-badge">حَكَم عهدة</span><strong>النزاع قيد المراجعة</strong></div><p>المبلغ محفوظ في العهدة لين يصدر القرار خلال ٤٨ ساعة. حَكَم عهدة يكتب توصية مسببة، وفريق عهدة يعتمد القرار ويبلغكم هني.</p><strong className="judge-criteria-title">شنو اللي يحكم بينكم؟</strong><ul className="judge-criteria"><li>وصف الغرض وصوره اللي اتفقتوا عليها وقت إنشاء الصفقة</li><li>سبب النزاع والصور اللي رفعها المشتري</li><li>محادثة الصفقة بينكم، وأي إقرار أو توضيح فيها</li><li>طريقة التسليم: هل فحص المشتري الغرض حضورياً ووافق عليه؟</li><li>التوقيت: هل فُتح النزاع خلال مدة الفحص؟</li></ul><p>إذا كان الغرض غير مطابق: يرجع الغرض للبائع ويرجع المبلغ للمشتري. وإذا كان مطابق: ينصرف المبلغ للبائع.</p></div>}
        {normalized === "disputed" && isBuyer && <div className="dispute-form"><label htmlFor="more-dispute-photos">أضف صور أدلة للنزاع (اختياري، حتى 5 بالمجموع)</label><input id="more-dispute-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setDisputePhotos(Array.from(event.target.files ?? []).slice(0, Math.max(0, 5 - (deal.dispute_evidence_paths?.length ?? 0))))} /><small className="muted-copy">{deal.dispute_evidence_paths?.length ?? 0}/5 صور محفوظة</small><Button variant="secondary" disabled={busy || !disputePhotos.length || (deal.dispute_evidence_paths?.length ?? 0) >= 5} onClick={() => void uploadMoreEvidence()}>رفع الأدلة</Button></div>}
        {normalized === "inspection" && deal.inspection_deadline && <small className="inspection-countdown" role="timer" aria-live="polite">متبقي للفحص: {inspectionRemaining(deal.inspection_deadline, clockNow)}</small>}
        </Card>
@@ -319,6 +321,45 @@ export function DealDetailPage() {
     </div><aside className="detail-side"><Card className="chat-card"><h2 className="card-title"><MessageCircle size={19} /> محادثة الصفقة</h2><p className="chat-subtitle">الرسائل تتحدث تلقائياً كل شوي.</p><div className="chat-messages" aria-live="polite">{messages.length ? messages.map(msg => <div className={msg.sender_id === session.user.id ? "chat-bubble mine" : "chat-bubble"} key={msg.id}><p>{msg.body}</p><small>{new Date(msg.created_at).toLocaleTimeString("ar-KW", { hour: "2-digit", minute: "2-digit" })}</small></div>) : <div className="chat-empty">ابدأوا المحادثة وتأكدوا من التفاصيل قبل التسليم.</div>}</div><form className="chat-form" onSubmit={send}><label className="sr-only" htmlFor="chat-message">رسالتك</label><input id="chat-message" maxLength={2000} placeholder="اكتب رسالة…" value={message} onChange={e => setMessage(e.target.value)} /><Button type="submit" disabled={busy || !message.trim()}>إرسال</Button></form>{chatError && <ErrorMessage>{chatError}</ErrorMessage>}</Card><Card className="side-info"><h3><Clock3 size={18} /> مدة الفحص</h3><p>{deal.inspection_hours} ساعة من تأكيد الاستلام.</p><h3><Truck size={18} /> التوصيل</h3><p>{deal.delivery_method === "delivery" ? deal.delivery_carrier || "يحددها الطرفان بالاتفاق" : "تأكيد حضوري من الطرفين"}</p><div className="side-fee"><span>رسوم الصفقة</span><b>{formatKwd(deal.fee_amount)}</b><small>على {deal.fee_payer === "buyer" ? "المشتري" : deal.fee_payer === "seller" ? "البائع" : "الطرفين"}</small></div></Card></aside></div>
     <DealPaymentSheet open={paymentOpen} onClose={() => setPaymentOpen(false)} deal={deal} session={session} profile={people.find((person) => person.id === session.user.id) ?? null} returnedTapAuthorizationId={returnedTapAuthorizationId} returnedStripeSessionId={returnedStripeSessionId} onLinked={async () => { setPaymentOpen(false); setReturnedTapAuthorizationId(null); setReturnedStripeSessionId(null); window.sessionStorage.removeItem("ohda.tap.authorization"); window.sessionStorage.removeItem("ohda.stripe.session"); await reload(true); }} />
   </> : null}</div></Shell>;
+}
+
+function dealStages(deal: OhdaDeal) {
+  const status = deal.status.toLowerCase();
+  const inPerson = deal.delivery_method === "in_person";
+  const stages = inPerson
+    ? ["الاتفاق على الشروط", "حجز المبلغ في العهدة", "التسليم والفحص الحضوري", "موافقة الطرفين", "صرف المبلغ للبائع"]
+    : ["الاتفاق على الشروط", "حجز المبلغ في العهدة", "شحن الغرض", "الوصول وفترة الفحص", "صرف المبلغ للبائع"];
+  const order: Record<string, number> = inPerson
+    ? { created: 0, pending: 0, awaiting_acceptance: 0, awaiting_payment: 1, payment_pending: 1, funded: 2, inspection: 3, disputed: 3, completed: 5 }
+    : { created: 0, pending: 0, awaiting_acceptance: 0, awaiting_payment: 1, payment_pending: 1, funded: 2, shipped: 3, inspection: 3, disputed: 3, completed: 5 };
+  const ended = ["cancelled", "refunded"].includes(status);
+  let current = order[status] ?? 0;
+  if (inPerson && status === "funded" && (deal.live_buyer_approved || deal.live_seller_approved)) current = 3;
+  return { stages, current, ended, disputed: status === "disputed" };
+}
+
+function DealProgress({ deal }: { deal: OhdaDeal }) {
+  const { stages, current, ended, disputed } = dealStages(deal);
+  return <Card className="progress-card"><h2 className="card-title">مراحل الصفقة</h2>
+    {ended && <p className="progress-ended">{deal.status.toLowerCase() === "refunded" ? "انتهت الصفقة بإرجاع المبلغ للمشتري." : "تم إلغاء الصفقة وفك حجز المبلغ."}</p>}
+    <ol className={ended ? "deal-stepper is-ended" : "deal-stepper"}>{stages.map((label, index) => {
+      const state = index < current ? "done" : index === current ? (disputed ? "blocked" : "current") : "todo";
+      return <li key={label} className={`step-${state}`}><span className="step-dot">{state === "done" ? <Check size={14} /> : index + 1}</span><div><strong>{label}</strong><small>{state === "done" ? "تم" : state === "current" ? "المرحلة الحالية" : state === "blocked" ? "متوقفة بسبب نزاع" : "قادمة"}</small></div></li>;
+    })}</ol>
+  </Card>;
+}
+
+function MoneyCard({ deal, isSeller, iban }: { deal: OhdaDeal; isSeller: boolean; iban: string | null }) {
+  const status = deal.status.toLowerCase();
+  if (!["completed", "refunded"].includes(status)) return null;
+  const sellerFee = deal.fee_payer === "seller" ? deal.fee_amount : deal.fee_payer === "split" ? deal.fee_amount / 2 : 0;
+  const net = Math.max(deal.amount - sellerFee, 0);
+  if (status === "refunded") return <Card className="money-card"><h2 className="card-title">وين راحت الفلوس؟</h2><p>تم فك حجز المبلغ <b>{formatKwd(deal.amount)}</b> ورجع لوسيلة الدفع اللي دفع فيها المشتري. يظهر في حسابه خلال ١–٥ أيام عمل حسب البنك.</p></Card>;
+  return <Card className="money-card"><h2 className="card-title">وين راحت الفلوس؟</h2>
+    <div className="money-flow"><div><small>دفع المشتري</small><b>{formatKwd(deal.amount)}</b></div><span>←</span><div><small>رسوم عهدة على البائع</small><b>{formatKwd(sellerFee)}</b></div><span>←</span><div className="money-net"><small>صافي البائع</small><b>{formatKwd(net)}</b></div></div>
+    <p>المبلغ انصرف من العهدة لصالح البائع بعد {deal.delivery_method === "in_person" ? "موافقة الطرفين" : "تأكيد المشتري أو انتهاء مدة الفحص"}. فريق عهدة يحوّل صافي المبلغ على آيبان البائع خلال ١–٣ أيام عمل.</p>
+    {isSeller && (iban ? <p className="money-iban">التحويل على الآيبان: <b dir="ltr">{iban.slice(0, 4)} •••• {iban.slice(-4)}</b></p> : <p className="money-iban warn">ما سجلت آيبان للحين. <Link href="/profile">أضف الآيبان من حسابك</Link> عشان يوصلك المبلغ.</p>)}
+  </Card>;
 }
 
 function LockKeyholeIcon() { return <PackageCheck size={21} />; }

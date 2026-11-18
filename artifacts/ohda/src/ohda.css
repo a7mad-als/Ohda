@@ -623,3 +623,77 @@ p { margin-top: 0; }
 .judge-panel li.pro-buyer span { background: #FEF3C7; color: #92400E; }
 .judge-panel li.pro-seller span { background: #D1FAE5; color: #065F46; }
 .judge-apply { width: 100%; }
+
+/* Join by code */
+.join-code { display: grid; gap: 12px; margin: 0 0 22px; padding: 18px 20px; border: 1px dashed #9fd3bb; border-radius: 20px; background: #ECF6F1; }
+.join-code-head { display: flex; gap: 12px; align-items: center; }
+.join-code-head strong { display: block; color: #064E3B; font-size: 16px; }
+.join-code-head small { color: #3F5550; font-size: 13px; }
+.join-code-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #064E3B; color: #fff; flex: none; }
+.join-code-row { display: flex; gap: 10px; }
+.join-code-row input { flex: 1; min-width: 0; height: 48px; padding: 0 14px; border: 1.5px solid #D4E9DF; border-radius: 14px; background: #fff; font-family: ui-monospace, monospace; font-size: 18px; font-weight: 700; letter-spacing: 3px; text-align: center; }
+.join-code-row input:focus { outline: none; border-color: #0E9F6E; box-shadow: 0 0 0 4px rgba(14,159,110,.12); }
+.join-code-error { color: #DC2626; font-weight: 700; }
+.join-code.compact { margin: 22px 0 0; background: rgba(255,255,255,.75); }
+
+/* Deal stepper */
+.progress-card .card-title { margin-bottom: 14px; }
+.deal-stepper { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; position: relative; }
+.deal-stepper li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.deal-stepper li::before { content: ""; position: absolute; top: 17px; right: 50%; width: 100%; height: 3px; background: #D4E9DF; z-index: 0; }
+.deal-stepper li:first-child::before { display: none; }
+.deal-stepper li.step-done::before, .deal-stepper li.step-current::before, .deal-stepper li.step-blocked::before { background: #0E9F6E; }
+.step-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #D4E9DF; background: #fff; color: #64748B; font-weight: 800; font-size: 14px; }
+.step-done .step-dot { background: #0E9F6E; border-color: #0E9F6E; color: #fff; }
+.step-current .step-dot { background: #F59E0B; border-color: #F59E0B; color: #fff; box-shadow: 0 0 0 6px rgba(245,158,11,.18); }
+.step-blocked .step-dot { background: #DC2626; border-color: #DC2626; color: #fff; }
+.deal-stepper strong { display: block; color: #064E3B; font-size: 13px; line-height: 1.4; }
+.deal-stepper small { color: #64748B; font-size: 11px; }
+.step-current strong { color: #92400E; }
+.deal-stepper.is-ended { opacity: .55; }
+.progress-ended { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: #F1F5F9; color: #475569; font-weight: 700; }
+@media (max-width: 640px) {
+  .deal-stepper { grid-template-columns: 1fr; gap: 0; }
+  .deal-stepper li { flex-direction: row; text-align: right; gap: 12px; padding: 6px 0; }
+  .deal-stepper li::before { top: -50%; right: 17px; width: 3px; height: 100%; }
+}
+
+/* Money card */
+.money-card p { color: #3F5550; line-height: 1.8; }
+.money-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.money-flow > div { flex: 1; min-width: 110px; padding: 12px; border-radius: 14px; background: #F7FBF9; border: 1px solid #D4E9DF; text-align: center; }
+.money-flow small { display: block; color: #64748B; font-size: 12px; }
+.money-flow b { color: #064E3B; font-size: 16px; }
+.money-flow > span { color: #0E9F6E; font-weight: 800; }
+.money-flow .money-net { background: #064E3B; border-color: #064E3B; }
+.money-flow .money-net small, .money-flow .money-net b { color: #fff; }
+.money-iban { padding: 10px 12px; border-radius: 12px; background: #ECF6F1; }
+.money-iban.warn { background: #FFFBEB; color: #92400E; }
+.judge-criteria-title { display: block; margin: 6px 0; color: #064E3B; }
+.judge-criteria { margin: 0 0 10px; padding-inline-start: 20px; color: #3F5550; line-height: 1.9; font-size: 14px; }
+.hawiyati-badge { display: grid; place-items: center; gap: 2px; width: 64px; height: 64px; flex: none; border-radius: 18px; background: linear-gradient(160deg, #0E9F6E, #064E3B); color: #fff; }
+.hawiyati-badge small { font-size: 11px; font-weight: 800; line-height: 1; }
+.profile-coming { display: flex; align-items: center; gap: 14px; }
+
+/* Simplified hero */
+.hero-simple { max-width: 760px; margin: 28px auto 0; padding: 40px 20px 10px; text-align: center; }
+.hero-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; background: #ECF6F1; color: #064E3B; font-size: 14px; font-weight: 700; }
+.hero-simple h1 { margin: 18px 0 12px; color: #064E3B; font-family: 'Cairo', sans-serif; font-size: clamp(36px, 6vw, 60px); font-weight: 800; line-height: 1.2; }
+.hero-simple h1 span { color: #0E9F6E; }
+.hero-simple > p { margin: 0 auto 26px; max-width: 520px; color: #3F5550; font-size: clamp(17px, 2.2vw, 20px); line-height: 1.7; }
+.hero-simple-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.hero-simple .join-code { max-width: 520px; margin: 26px auto 0; text-align: right; }
+.hero-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 900px; margin: 34px auto 0; }
+.hero-facts > div { display: grid; justify-items: center; gap: 4px; padding: 16px 10px; border: 1px solid #D4E9DF; border-radius: 18px; background: #fff; text-align: center; color: #0E9F6E; }
+.hero-facts b { color: #064E3B; font-size: 15px; }
+.hero-facts small { color: #64748B; font-size: 12px; }
+@media (max-width: 640px) {
+  .hero-simple { padding-top: 22px; }
+  .hero-simple-actions .button { flex: 1 1 100%; }
+  .hero-facts { grid-template-columns: repeat(2, 1fr); }
+}
+.join-code { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.join-code-row input { width: 100%; letter-spacing: 2px; }
+.join-code-row .button { flex: none; }
+@media (max-width: 640px) { .join-code { padding: 14px; } .join-code-head small { font-size: 12px; } }
+@media (max-width: 640px) { .hero-facts { padding: 0 16px; } .home-tabs { padding: 0 16px; } }

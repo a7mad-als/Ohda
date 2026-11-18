@@ -308,7 +308,7 @@ export function DealPaymentSheet({
           <div className="payment-provider-content">
             {deal.amount > 2000 ? <p role="alert">مبلغ الصفقة أعلى من حد Tap. اختار Stripe.</p> : canUseTap ? <>
               <p>صفحة Tap الآمنة تعرض وسائل الدفع المتاحة مثل كي نت والبطاقات وأبل باي.</p>
-              <details className="card-hint-details"><summary>بيانات بطاقة العرض</summary><div className="tap-test-card-hint"><b>كي نت</b><span dir="ltr">8888880000000001 · 09/30 · PIN 1234</span></div><div className="tap-test-card-hint"><b>بطاقة</b><span dir="ltr">5123 4500 0000 0008 · 01/39 · CVC 100</span></div></details>
+              <details className="card-hint-details"><summary>بيانات بطاقة العرض</summary><div className="tap-test-card-hint"><b>اختار «بطاقة» في صفحة Tap واستخدم:</b><span dir="ltr">5123 4500 0000 0008 · 01/39 · CVC 100</span></div></details>
             </> : <p role="alert">بوابة Tap غير متاحة حالياً. اختار Stripe أو حاول لاحقاً.</p>}
           </div>
         )}

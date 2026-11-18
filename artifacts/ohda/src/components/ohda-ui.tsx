@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { LockKeyhole, House, FileText, Plus, CircleUserRound, ArrowLeft, LoaderCircle, Download } from "lucide-react";
+import { LockKeyhole, House, FileText, Plus, CircleUserRound, ArrowLeft, LoaderCircle, Download, KeyRound } from "lucide-react";
 import { addWaitlistInterest, getProfile, getSession, signOut, type OhdaProfile, type OhdaSession } from "@/lib/ohda-data";
 
 export function useOhdaSession() {
@@ -162,4 +162,21 @@ export function SubmitButton({ busy, children }: { busy: boolean; children: Reac
 
 export function preventSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
+}
+
+export function JoinByCode({ compact = false }: { compact?: boolean }) {
+  const [, navigate] = useLocation();
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (clean.length !== 6) { setError("كود الصفقة يتكون من ٦ حروف وأرقام."); return; }
+    navigate(`/j/${clean}`);
+  }
+  return <form className={compact ? "join-code compact" : "join-code"} onSubmit={submit}>
+    <div className="join-code-head"><span className="join-code-icon"><KeyRound size={18} /></span><div><strong>عندك كود صفقة؟</strong><small>اكتب الكود اللي أرسله لك الطرف الثاني وانضم للصفقة</small></div></div>
+    <div className="join-code-row"><input aria-label="كود الصفقة" dir="ltr" maxLength={8} placeholder="8DF33C" value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setError(""); }} /><button className="button button-primary" type="submit">انضم <ArrowLeft size={16} /></button></div>
+    {error && <small role="alert" className="join-code-error">{error}</small>}
+  </form>;
 }

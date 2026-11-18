@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, BadgeCheck, Clock3, Handshake, LockKeyhole, PackageCheck, ShieldCheck, Truck, WalletCards, Scale, HelpCircle, Sparkles, ListChecks } from "lucide-react";
-import { Shell, Card, WaitlistButton } from "@/components/ohda-ui";
+import { Shell, Card, WaitlistButton, JoinByCode } from "@/components/ohda-ui";
 
 const steps = [
   ["المشتري يدفع", "يدفع عبر كي نت أو البطاقة من خلال بوابة دفع مرخصة."],
@@ -39,25 +39,19 @@ export default function Home() {
   }
 
   return <Shell>
-    <section className="hero-block">
-      <div className="hero-copy"><span className="eyebrow">منصة وساطة دفع لصفقات المستعمل في الكويت</span><h1>بيع واشتري المستعمل بدون خوف</h1><p className="hero-subtitle">فلوسك محفوظة في العهدة لين تستلم غرضك وتتأكد منه</p><p className="hero-note">عهدة طرف ثالث محايد بين البائع والمشتري: تحفظ المبلغ، توثّق الاتفاق، وتصرفه للبائع بعد التأكيد.</p>
-        <div className="hero-actions"><Link className="button button-primary" href="/deals/new">ابدأ صفقة الحين <ArrowLeft size={18} /></Link><button type="button" className="button button-secondary" onClick={() => open("how")}>شلون تشتغل؟</button></div>
-        <div className="hero-proof"><span><ShieldCheck size={17} /> اتفاق موثّق للطرفين</span><span><Clock3 size={17} /> فحص بعد الاستلام</span><span><LockKeyhole size={17} /> دفع عبر بوابات مرخصة</span></div>
-      </div>
-      <div className="hero-illustration" aria-label="مراحل الصفقة في عهدة">
-        <div className="illustration-top"><span>ملخص الصفقة</span><span className="demo-tag">عهدة</span></div>
-        <div className="agreement-preview"><div className="agreement-icon"><PackageCheck size={24} /></div><div><small>غرض مستعمل</small><strong>اتفاقكم واضح من البداية</strong><small>الطرفين يراجعون التفاصيل</small></div></div>
-        <div className="preview-stage stage-done"><span className="stage-check"><BadgeCheck size={17} /></span><div><b>تم الاتفاق</b><small>السعر والتسليم محددين</small></div><span className="stage-state">مكتمل</span></div>
-        <div className="stage-rule" />
-        <div className="preview-stage stage-next"><span className="stage-check"><LockKeyhole size={16} /></span><div><b>المبلغ محفوظ في العهدة</b><small>بانتظار الاستلام والفحص</small></div><span className="stage-state">الحين</span></div>
-        <div className="stage-rule" />
-        <div className="preview-stage"><span className="stage-check"><Handshake size={16} /></span><div><b>ينصرف للبائع</b><small>بعد تأكيد المشتري</small></div></div>
-        <div className="illustration-foot"><LockKeyhole size={13} /> المبلغ محمي طوال مدة الصفقة</div>
-      </div>
+    <section className="hero-simple">
+      <span className="hero-pill"><LockKeyhole size={15} /> منصة وساطة دفع لصفقات المستعمل في الكويت</span>
+      <h1>بيع واشتري المستعمل <span>بدون خوف</span></h1>
+      <p>فلوسك محفوظة في العهدة لين تستلم غرضك وتتأكد منه.</p>
+      <div className="hero-simple-actions"><Link className="button button-primary" href="/deals/new">ابدأ صفقة الحين <ArrowLeft size={18} /></Link><button type="button" className="button button-secondary" onClick={() => open("how")}>شلون تشتغل؟</button></div>
+      <JoinByCode compact />
     </section>
 
-    <section className="assurance-strip" aria-label="مزايا العهدة">
-      <div><WalletCards /><span><b>العمولة تبدأ من ٢٥٠ فلس</b><small>مبلغ واضح قبل الصفقة</small></span></div><div><Clock3 /><span><b>٢٤–٧٢ ساعة</b><small>مدة الفحص تختارونها</small></span></div><div><Truck /><span><b>حضوري أو توصيل</b><small>اختاروا اللي يناسبكم</small></span></div><div><BadgeCheck /><span><b>أول صفقة مجانية</b><small>ما عليها عمولة</small></span></div>
+    <section className="hero-facts" aria-label="مزايا عهدة">
+      <div><WalletCards size={20} /><b>من ٢٥٠ فلس</b><small>عمولة رمزية</small></div>
+      <div><Clock3 size={20} /><b>٢٤–٧٢ ساعة</b><small>مدة الفحص</small></div>
+      <div><Truck size={20} /><b>حضوري أو توصيل</b><small>على راحتكم</small></div>
+      <div><ShieldCheck size={20} /><b>أول صفقة</b><small>مجانية</small></div>
     </section>
 
     <section className="home-tabs" id="home-tabs">
@@ -111,6 +105,5 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="closing-cta"><div className="closing-emblem"><LockKeyhole size={23} /></div><span>الصفقة الواضحة تبدأ باتفاق</span><h2>خلّوا كل شيء بيّن.</h2><Link className="button button-primary" href="/deals/new">ابدأ صفقة الحين <ArrowLeft size={18} /></Link></section>
   </Shell>;
 }

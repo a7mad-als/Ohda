@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, IdCard, ShieldCheck, UserRound } from "lucide-react";
 import { applyDealAction, getDealPhotoUrl, getMessages, getProfiles, listAdminPayoutRecords, listDeals, listReceivedRatings, listWaitlistInterests, recordAdminPayout, settleTestPayment, updateProfile, type AdminPayoutRecord, type DealMessage, type OhdaDeal, type OhdaProfile, type WaitlistInterest } from "@/lib/ohda-data";
 import { Card, ErrorMessage, Field, FormMessage, PageHeading, Shell, SubmitButton, WaitlistButton, useOhdaSession } from "@/components/ohda-ui";
 import { judgeDispute } from "@/lib/dispute-judge";
@@ -54,7 +54,7 @@ export function ProfilePage() {
      <Field label="الدولة" id="profile-country"><select id="profile-country" value={country} onChange={e => setCountry(e.target.value)}>{["الكويت", "السعودية", "الإمارات", "قطر", "البحرين", "عُمان", "أخرى"].map(c => <option key={c}>{c}</option>)}</select></Field>
      <Field label="الآيبان" id="profile-iban" hint="اختياري — آيبان الكويت يبدأ بـ KW ويتكون من 30 خانة. مستحقاتك تتحول عليه بعد إتمام الصفقة."><input id="profile-iban" autoComplete="off" dir="ltr" maxLength={30} value={iban} onChange={e => setIban(e.target.value.toUpperCase())} /></Field>
     <FormMessage error={error} success={success} /><SubmitButton busy={busy}>حفظ التغييرات</SubmitButton>
-  </form><div className="profile-stats"><div><small>صفقات مكتملة</small><strong>{completedDeals === null ? "—" : completedDeals.toLocaleString("ar-KW")}</strong></div><div><small>متوسط التقييم</small><strong>{averageRating === null ? "—" : `${averageRating.toFixed(1)} / 5`}</strong></div></div>{country === "الكويت" && <div className="profile-coming"><div><strong>وثّق هويتك بـ هويتي</strong><span>خدمة توثيق الهوية ما نزلت للحين.</span></div><WaitlistButton feature="hawiyati_verification" label="سجل اهتمامك" /></div>}</Card>}</div></Shell>;
+  </form><div className="profile-stats"><div><small>صفقات مكتملة</small><strong>{completedDeals === null ? "—" : completedDeals.toLocaleString("ar-KW")}</strong></div><div><small>متوسط التقييم</small><strong>{averageRating === null ? "—" : `${averageRating.toFixed(1)} / 5`}</strong></div></div>{country === "الكويت" && <div className="profile-coming"><span className="hawiyati-badge" aria-hidden="true"><IdCard size={26} /><small>هويتي</small></span><div><strong>وثّق هويتك بتطبيق هويتي</strong><span>توثيق الهوية المدنية الكويتية يرفع ثقة الطرف الثاني فيك، وقريباً يصير شرط للصفقات الكبيرة.</span></div><WaitlistButton feature="hawiyati_verification" label="سجل اهتمامك" /></div>}</Card>}</div></Shell>;
 }
 
 type AdminTab = "overview" | "deals" | "disputes" | "payouts" | "waitlist" | "people";

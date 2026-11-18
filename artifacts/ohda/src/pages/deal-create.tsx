@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "wouter";
 import { applyDealAction, calculateFee, createDeal, formatKwd, listDeals, uploadDealPhoto, type OhdaDeal } from "@/lib/ohda-data";
-import { Card, Field, FormMessage, PageHeading, Shell, SubmitButton, useOhdaSession } from "@/components/ohda-ui";
+import { Card, Field, FormMessage, JoinByCode, PageHeading, Shell, SubmitButton, useOhdaSession } from "@/components/ohda-ui";
 
 export function NewDealPage() {
   const { session, loading } = useOhdaSession();
@@ -58,6 +58,7 @@ export function NewDealPage() {
     }
   }
   return <Shell><div className="page-container narrow"><PageHeading eyebrow="اتفاق جديد" title="خلّ تفاصيل الصفقة واضحة" description="عبّوا التفاصيل اللي اتفقتوا عليها. الطرف الثاني يراجعها قبل ما ينضم." />
+  {!created && <JoinByCode />}
   {created ? <Card className="invite-card"><span className="invite-symbol">✓</span><span className="eyebrow">تم إنشاء الصفقة</span><h1>باقي ترسل الدعوة للطرف الثاني.</h1><p>رمز الصفقة</p><strong className="invite-code" dir="ltr">{created.code}</strong><p className="invite-link" dir="ltr">{inviteUrl}</p><div className="hero-actions"><button className="button button-primary" type="button" onClick={() => void copyInvite()}>{copied ? "اننسخ الرابط" : "انسخ رابط الدعوة"}</button><a className="button button-secondary" href={`https://wa.me/?text=${encodeURIComponent(`هلا، هذي تفاصيل صفقتنا في عهدة: ${inviteUrl}`)}`} target="_blank" rel="noreferrer">شارك على الواتساب</a></div>{photoError && <FormMessage error={photoError} />}<Link className="button button-secondary" href={`/deals/${created.id}`}>عرض تفاصيل الصفقة</Link></Card> :
   loading ? <Card><div className="skeleton-line" /><div className="skeleton-line short" /></Card> : !session ? <Card className="notice-card"><h2>تحتاج حساب عشان تبدأ</h2><p>سجّل دخولك أو سوّ حساب جديد، وبعدها نكمل تفاصيل الصفقة.</p><Link className="button button-primary" href="/login">تسجيل الدخول</Link></Card> : <form className="deal-form" onSubmit={submit}>
     <Card className="form-card"><h2 className="card-title">دورك بالصفقة</h2><div className="choice-row" role="radiogroup" aria-label="دورك"><label className={role === "seller" ? "choice selected" : "choice"}><input type="radio" name="role" checked={role === "seller"} onChange={() => setRole("seller")} /><strong>أنا البايع</strong><span>أعرض الغرض وأرسل الدعوة</span></label><label className={role === "buyer" ? "choice selected" : "choice"}><input type="radio" name="role" checked={role === "buyer"} onChange={() => setRole("buyer")} /><strong>أنا المشتري</strong><span>أبدأ الاتفاق وأدعو البايع</span></label></div></Card>
@@ -73,7 +74,7 @@ export function NewDealPage() {
       <Field label="طريقة التسليم" id="deal-delivery"><select id="deal-delivery" value={delivery} onChange={e => setDelivery(e.target.value as "in_person" | "delivery")}><option value="in_person">تسليم حضوري — تأكيد الطرفين</option><option value="delivery">عن طريق التوصيل — الفحص بعد الوصول</option></select></Field>
       <Field label="من يدفع رسوم الصفقة؟" id="deal-fee-payer"><select id="deal-fee-payer" value={payer} onChange={e => setPayer(e.target.value as "buyer" | "seller" | "split")}><option value="split">تنقسم بيننا</option><option value="buyer">المشتري</option><option value="seller">البائع</option></select></Field>
     </div>
-      <div className="fee-preview"><div><span>رسوم عهدة التقديرية</span><strong>{formatKwd(fee)}</strong></div><small>{firstDeal ? "أول صفقة لك مجانًا." : "تظهر الرسوم قبل التأكيد. ما في مدفوعات فعلية بهالنسخة."}</small></div>
+      <div className="fee-preview"><div><span>رسوم عهدة التقديرية</span><strong>{formatKwd(fee)}</strong></div><small>{firstDeal ? "أول صفقة لك مجانًا." : "تظهر الرسوم قبل التأكيد، وتنخصم بس عند إتمام الصفقة."}</small></div>
     </Card>
     <FormMessage error={error} /><div className="form-submit"><SubmitButton busy={busy}>أنشئ الصفقة وأرسل الدعوة</SubmitButton><p>ما في خصم أو حجز مبلغ بمجرد إنشاء الصفقة.</p></div>
   </form>}</div></Shell>;
