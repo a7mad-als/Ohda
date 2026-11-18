@@ -8,12 +8,12 @@ import { QRCodeSVG } from "qrcode.react";
 
 function statusTitle(status: string) {
   const names: Record<string, string> = { created: "بانتظار الطرف الثاني", pending: "بانتظار الطرف الثاني", awaiting_acceptance: "بانتظار الموافقة", awaiting_payment: "بانتظار الدفع", payment_pending: "جاري التحقق من الدفع", funded: "المبلغ محفوظ في العهدة", payment_authorized: "تم حجز المبلغ", authorized: "تم حجز المبلغ", shipped: "بالطريق", delivered: "وصل الغرض", inspection: "فترة الفحص", completed: "مكتملة", disputed: "فيها نزاع", refunded: "تم رد المبلغ", cancelled: "ملغاة", live_handover: "تسليم حضوري" };
-  return names[status.toLowerCase()] || status.replaceAll("_", " ");
+  return names[status.toLowerCase()] || "قيد المتابعة";
 }
 function eventTitle(event: DealEvent) {
   if (event.event_type === "status_changed" && event.new_status) return `تغيرت الحالة إلى: ${statusTitle(event.new_status)}`;
-  const labels: Record<string, string> = { created: "انعملت الصفقة", joined: "انضم الطرف الثاني", accepted: "تم تأكيد الاتفاق", payment_authorized: "تم حجز المبلغ في العهدة", shipped: "تم تسجيل الشحن", delivery_confirmed: "تأكد استلام الغرض", inspection_started: "بدأت مدة الفحص", completed: "اكتملت الصفقة", disputed: "تم تسجيل نزاع", live_approved: "تم تأكيد التسليم الحضوري" };
-  return labels[event.event_type] || event.event_type.replaceAll("_", " ");
+  const labels: Record<string, string> = { deal_created: "انعملت الصفقة", party_joined: "انضم الطرف الثاني", dispute_resolved: "صدر قرار النزاع", live_approve: "وافق أحد الطرفين حضورياً", live_complete: "اكتمل التسليم الحضوري", payment_pending: "بدأ الدفع", void_payment: "تم فك حجز المبلغ", attach_photos: "أُرفقت صور", created: "انعملت الصفقة", joined: "انضم الطرف الثاني", accepted: "تم تأكيد الاتفاق", payment_authorized: "تم حجز المبلغ في العهدة", shipped: "تم تسجيل الشحن", delivery_confirmed: "تأكد استلام الغرض", inspection_started: "بدأت مدة الفحص", completed: "اكتملت الصفقة", disputed: "تم تسجيل نزاع", live_approved: "تم تأكيد التسليم الحضوري" };
+  return labels[event.event_type] || "تحديث على الصفقة";
 }
 function inspectionRemaining(deadline: string, now: number) {
   const totalSeconds = Math.max(0, Math.floor((new Date(deadline).getTime() - now) / 1000));

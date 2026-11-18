@@ -65,6 +65,7 @@ function getSafeTapRedirect(value: unknown): string | null {
     ) {
       return null;
     }
+    if (url.searchParams.has("language")) url.searchParams.set("language", "ar");
     return url.toString();
   } catch {
     return null;
